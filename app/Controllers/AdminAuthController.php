@@ -267,4 +267,35 @@ class AdminAuthController extends BaseController
             ]);
         }
     }
+
+    public function admin_list()
+    {
+        return view('admin/admin_list'); // Ensure this view exists
+    }
+
+   public function getAdminList()
+    {
+        $AdminModel = new AdminModel();
+
+        // Assuming this fetches the list of admins from the model or database.
+        $adminList = $AdminModel->findAll(); 
+
+        $data = [];
+        foreach ($adminList as $index => $admin) {
+
+            // Build the data array to send back
+            $data[] = [
+                'counter' => $index + 1,
+                'full_name' => $admin['full_name'],
+                'email' => $admin['email'],
+                'actions' => '
+                    <button onclick="editAdmin(' . $admin['id'] . ')" class="btn btn-warning">Edit</button>
+                    <button onclick="deleteAdmin(' . $admin['id'] . ')" class="btn btn-danger">Delete</button>'
+            ];
+        }
+
+        // Return data in JSON format
+        return $this->response->setJSON(['data' => $data]);
+    }
+
 }

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Faculty List</title>
+    <title>Admin List</title>
     <!-- Stylesheets -->
 
     <link href="<?= base_url('assets/css/style.css') ?>" rel="stylesheet">
@@ -18,7 +18,7 @@
     <script src="<?= base_url('assets/js/scripts.js') ?>"></script>
 </head>
 <body class="sb-nav-fixed">
-        <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
+    <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
         <button class="btn btn-link btn-sm order-1 order-lg-0 me-4 me-lg-0" id="sidebarToggle"><i class="fas fa-bars"></i></button>
         <form class="d-none d-md-inline-block form-inline ms-auto me-0 me-md-3 my-2 my-md-0">
             <div class="input-group">
@@ -124,21 +124,15 @@
         <div id="layoutSidenav_content">
             <main>
                 <div class="container-fluid px-4 mt-4">
-                    <h2 class="mb-4">Faculty List</h2>
+                    <h2 class="mb-4">Admin List</h2>
                     <div class="card mb-4">
                         <div class="card-body">
-                            <table id="facultyTable" class="table table-striped">
+                            <table id="adminTable" class="table table-striped">
                                 <thead>
                                     <tr>
                                         <th>#</th>
-                                        <th>Faculty ID</th>
                                         <th>Full Name</th>
-                                        <th>Phone Number</th>
-                                        <th>Gender</th>
                                         <th>Email</th>
-                                        <th>College</th>
-                                        <th>Department</th>
-                                        <th>Status</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -170,69 +164,26 @@
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.9.0/main.min.js"></script>
     <script>
         $(document).ready(function() {
-            $('#facultyTable').DataTable({
+            $('#adminTable').DataTable({
                 processing: true,
                 serverSide: true,
                 ajax: {
-                    url: '<?= base_url('faculty/getFacultyList') ?>',
+                    url: '<?= base_url('admin/getAdminList') ?>',
                     type: 'GET',
                     dataSrc: 'data'
                 },
                 columns: [
                     { data: 'counter' },
-                    { data: 'faculty_id' },
                     { data: 'full_name' },
-                    { data: 'phone_number' },
-                    { data: 'gender' },
                     { data: 'email' },
-                    { data: 'college' },
-                    { data: 'department' },
-                    { data: 'is_active' },
                     { data: 'actions' }
                 ]
             });
         });
-
-        function activate(id) {
-            $.ajax({
-                url: '<?= base_url('faculty/activate/') ?>' + id,
-                method: 'POST',
-                success: function(response) {
-                    let data = JSON.parse(response);
-                    if (data.success) {
-                        alert(data.message);
-                        location.reload();
-                    } else {
-                        alert(data.message);
-                    }
-                }
-            });
-        }
-
-        function deactivate(id) {
-            $.ajax({
-                url: '<?= base_url('faculty/deactivate/') ?>' + id,
-                method: 'POST',
-                success: function(response) {
-                    let data = JSON.parse(response);
-                    if (data.success) {
-                        alert(data.message);
-                        location.reload();
-                    } else {
-                        alert(data.message);
-                    }
-                }
-            });
-        }
-
-        function editFaculty(facultyId) {
-            alert('Edit faculty with ID: ' + facultyId);
-        }
-
-        function deleteFaculty(facultyId) {
-            if (confirm('Are you sure you want to delete this faculty?')) {
+        function deleteFaculty(adminId) {
+            if (confirm('Are you sure you want to delete this admin?')) {
                 $.ajax({
-                    url: '<?= base_url('faculty/delete/') ?>' + facultyId,
+                    url: '<?= base_url('admin,/delete/') ?>' + adminId,
                     type: 'POST',
                     success: function(response) {
                         let data = JSON.parse(response);

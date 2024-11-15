@@ -36,6 +36,9 @@ $routes->group('admin', function($routes) {
     $routes->post('saveDepartment', 'AdminAuthController::saveDepartment'); // Save new department
     $routes->get('getDepartments', 'AdminController::getDepartments');
 
+    $routes->get('list', 'AdminAuthController::admin_list');
+    $routes->get('getAdminList', 'AdminAuthController::getAdminList');
+
 
 });
 
@@ -76,6 +79,9 @@ $routes->group('evaluation', function($routes) {
     $routes->post('saveAcademic', 'EvaluationController::saveAcademic');
     $routes->get('startAcademic/(:num)', 'EvaluationController::startAcademic/$1');
     $routes->get('closeAcademic/(:num)', 'EvaluationController::closeAcademic/$1');
+    
+    // Set Evaluation Dates (Open and Close)
+    //$routes->post('setDates', 'EvaluationController::setDates');
 
     // Rating Routes
     $routes->get('rating', 'EvaluationController::ratingForm');
@@ -92,10 +98,15 @@ $routes->group('evaluation', function($routes) {
     // Evaluation Answer Routes
     $routes->get('form', 'EvaluationAnswerController::index'); // Access the evaluation form
     $routes->match(['get', 'post'], 'submit', 'EvaluationAnswerController::submit');
-
-    //$routes->get('success', 'EvaluationAnswerController::success');  // Show confirmation after submission
 });
 
 
 
-
+$routes->group('evaluation-dates', function($routes) {
+    $routes->get('/', 'EvaluationDateController::index'); // List all evaluation dates
+    $routes->get('create', 'EvaluationDateController::create'); // Show create form
+    $routes->post('store', 'EvaluationDateController::store'); // Store new evaluation date
+    $routes->get('edit/(:num)', 'EvaluationDateController::edit/$1'); // Edit specific evaluation date
+    $routes->post('update/(:num)', 'EvaluationDateController::update/$1'); // Update specific evaluation date
+    $routes->get('delete/(:num)', 'EvaluationDateController::delete/$1'); // Delete specific evaluation date
+});

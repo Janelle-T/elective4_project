@@ -10,6 +10,9 @@
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.1/css/all.css" rel="stylesheet">
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
     <script src="<?= base_url('assets/js/scripts.js') ?>"></script>
+
+    <!-- FullCalendar CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.css" rel="stylesheet">
 </head>
 <body class="sb-nav-fixed">
     <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
@@ -25,7 +28,6 @@
                 <a class="nav-link dropdown-toggle" id="navbarDropdown" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="fas fa-user fa-fw"></i>
                     <?php if (session()->get('isLoggedIn')): ?>
-                        <!-- Display logged-in user's full name -->
                         <?= session()->get('full_name') ?>
                     <?php endif; ?>
                 </a>
@@ -47,8 +49,6 @@
                             <div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>
                             Dashboard
                         </a>
-
-                        <!-- User Management Dropdown -->
                         <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseUserManagement" aria-expanded="false" aria-controls="collapseUserManagement">
                             <div class="sb-nav-link-icon"><i class="fas fa-users"></i></div>
                             User Management
@@ -56,13 +56,11 @@
                         </a>
                         <div class="collapse" id="collapseUserManagement" aria-labelledby="headingUserManagement" data-bs-parent="#sidenavAccordion">
                             <nav class="sb-sidenav-menu-nested nav">
-                                <a class="nav-link" href="<?= base_url('admin/admin') ?>"><i class="fas fa-user-shield"></i> Admin</a>
+                                <a class="nav-link" href="<?= base_url('admin/list') ?>"><i class="fas fa-user-shield"></i> Admin</a>
                                 <a class="nav-link" href="<?= base_url('faculty/list') ?>"><i class="fas fa-chalkboard-teacher"></i> Faculty</a>
                                 <a class="nav-link" href="<?= base_url('student/list') ?>"><i class="fas fa-user-graduate"></i> Student</a>
                             </nav>
                         </div>
-
-                        <!-- College/Department Dropdown -->
                         <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseCollegeDepartment" aria-expanded="false" aria-controls="collapseCollegeDepartment">
                             <div class="sb-nav-link-icon"><i class="fas fa-building"></i></div>
                             College/Department
@@ -74,8 +72,6 @@
                                 <a class="nav-link" href="<?= base_url('admin/department') ?>"><i class="fas fa-building-columns"></i> Department</a>
                             </nav>
                         </div>
-
-                        <!-- Evaluation Management Dropdown -->
                         <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseEvaluationManagement" aria-expanded="false" aria-controls="collapseEvaluationManagement">
                             <div class="sb-nav-link-icon"><i class="fas fa-file-alt"></i></div>
                             Evaluation Management
@@ -87,11 +83,9 @@
                                 <a class="nav-link" href="<?= base_url('evaluation/rating') ?>"><i class="fas fa-star"></i> Rating Scale</a>
                                 <a class="nav-link" href="<?= base_url('evaluation/criteria') ?>"><i class="fas fa-list"></i> Criteria</a>
                                 <a class="nav-link" href="<?= base_url('evaluation/evaluation_question') ?>"><i class="fas fa-question-circle"></i> Evaluation Question</a>
-                                
+                                <a class="nav-link" href="<?= base_url('evaluation-dates') ?>"><i class="fas fa-question-circle"></i> Evaluation Status</a>
                             </nav>
                         </div>
-
-                        <!-- Faculty Evaluation Dropdown -->
                         <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseFacultyEvaluation" aria-expanded="false" aria-controls="collapseFacultyEvaluation">
                             <div class="sb-nav-link-icon"><i class="fas fa-chalkboard-teacher"></i></div>
                             Faculty Evaluation
@@ -103,8 +97,6 @@
                                 <a class="nav-link" href="<?= base_url('/') ?>"><i class="fas fa-chart-line"></i> Evaluation Result</a>
                             </nav>
                         </div>
-
-                        <!-- Token Link -->
                         <a class="nav-link" href="<?= base_url('/') ?>">
                             <div class="sb-nav-link-icon"><i class="fas fa-key"></i></div>
                             Token
@@ -129,6 +121,9 @@
                                     </div>
                                 </center>
                             </section>
+
+                            <!-- FullCalendar -->
+                            <div id="calendar" class="mt-5"></div>
                         </div>
                     </div>
                 </div>
@@ -136,11 +131,9 @@
             <footer class="py-4 bg-light mt-auto">
                 <div class="container-fluid px-4">
                     <div class="d-flex align-items-center justify-content-between small">
-                        <div class="text-muted">Copyright &copy; Your Website 2023</div>
+                        <div class="text-muted">© 2024 All Rights Reserved</div>
                         <div>
-                            <a href="#">Privacy Policy</a>
-                            &middot;
-                            <a href="#">Terms &amp; Conditions</a>
+                            <a href="#">Privacy Policy</a> · <a href="#">Terms & Conditions</a>
                         </div>
                     </div>
                 </div>
@@ -148,31 +141,46 @@
         </div>
     </div>
 
+    <!-- FullCalendar JS -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.9.0/main.min.js"></script>
+
     <script>
-    function logout() {
-        if (confirm('Are you sure you want to logout?')) {
-            fetch('<?= base_url('auth/logout') ?>', {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: new URLSearchParams({
-                    'csrf_token_name': '<?= csrf_hash() ?>'
-                })
-            })
-            .then(response => {
-                if (response.ok) {
-                    window.location.href = '<?= base_url('auth/login') ?>';
-                } else {
-                    alert('Logout failed.');
+         document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',  // Set initial view as month grid
+                events: '/evaluation-dates/showEvaluationDates',  // Fetch events from the controller
+                eventClick: function(info) {
+                    alert('Evaluation Date ID: ' + info.event.id);
                 }
-            })
-            .catch(error => console.error('Error:', error));
+            });
+
+            calendar.render();
+        });
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                fetch('<?= base_url('auth/logout') ?>', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        'csrf_token_name': '<?= csrf_hash() ?>'
+                    })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.href = '<?= base_url('auth/login') ?>';
+                    } else {
+                        alert('Logout failed.');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
         }
-    }
     </script>
 </body>
 </html>

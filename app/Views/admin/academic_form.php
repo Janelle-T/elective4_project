@@ -59,7 +59,7 @@
                         </a>
                         <div class="collapse" id="collapseUserManagement" aria-labelledby="headingUserManagement" data-bs-parent="#sidenavAccordion">
                             <nav class="sb-sidenav-menu-nested nav">
-                                <a class="nav-link" href="<?= base_url('admin/admin') ?>"><i class="fas fa-user-shield"></i> Admin</a>
+                                <a class="nav-link" href="<?= base_url('admin/list') ?>"><i class="fas fa-user-shield"></i> Admin</a>
                                 <a class="nav-link" href="<?= base_url('faculty/list') ?>"><i class="fas fa-chalkboard-teacher"></i> Faculty</a>
                                 <a class="nav-link" href="<?= base_url('student/list') ?>"><i class="fas fa-user-graduate"></i> Student</a>
                             </nav>
@@ -119,91 +119,82 @@
 
         <div id="layoutSidenav_content">
              <main>
-                <div class="container-fluid px-4">
-                    <h1 class="mt-4">Academic Year Management</h1>
+    <div class="container-fluid px-4">
+        <h1 class="mt-4">Academic Year Management</h1>
 
-                    <!-- Button to open the modal -->
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#academicModal">Add Academic Year</button>
+        <!-- Button to open the modal -->
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#academicModal">Add Academic Year</button>
 
-                    <!-- DataTable for displaying existing academic years -->
-                    <table id="academicTable" class="table table-striped table-bordered" cellspacing="0" width="100%">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>School Year</th>
-                                <th>Semester</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php $counter = 1; ?>
-                            <?php foreach ($academicRecords as $academic): ?>
-                                <tr>
-                                    <td><?= $counter++ ?></td> <!-- Row counter -->
-                                    <td><?= $academic['school_year'] ?></td>
-                                    <td><?= $academic['semester'] == 1 ? '1st Semester' : '2nd Semester' ?></td>
-                                    <td><?= $academic['status'] == 1 ? 'Start' : 'Closed' ?></td>
-                                    <td>
-                                        <?php if ($academic['status'] == 2): ?>
-                                            <a href="<?= base_url('evaluation/startAcademic/' . $academic['id']) ?>" class="btn btn-success">Start</a>
-                                        <?php else: ?>
-                                            <a href="<?= base_url('evaluation/closeAcademic/' . $academic['id']) ?>" class="btn btn-danger">Close</a>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+        <!-- DataTable for displaying existing academic years -->
+        <table id="academicTable" class="table table-striped table-bordered" cellspacing="0" width="100%">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>School Year</th>
+                    <th>Semester</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php $counter = 1; ?>
+                <?php foreach ($academicRecords as $academic): ?>
+                    <tr>
+                        <td><?= $counter++ ?></td> <!-- Row counter -->
+                        <td><?= $academic['school_year'] ?></td>
+                        <td><?= $academic['semester'] == 1 ? '1st Semester' : '2nd Semester' ?></td>
+                        <td><?= $academic['status'] == 1 ? 'Start' : 'Closed' ?></td>
+                        <td>
+                            <?php if ($academic['status'] == 2): ?>
+                                <a href="<?= base_url('evaluation/startAcademic/' . $academic['id']) ?>" class="btn btn-success">Start</a>
+                            <?php else: ?>
+                                <a href="<?= base_url('evaluation/closeAcademic/' . $academic['id']) ?>" class="btn btn-danger">Close</a>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<!-- Modal for adding academic year -->
+<div class="modal fade" id="academicModal" tabindex="-1" aria-labelledby="academicModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="<?= base_url('evaluation/saveAcademic') ?>">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="academicModalLabel">Add Academic Year</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-            </main>
-
-            <!-- Modal for adding academic year -->
-            <div class="modal fade" id="academicModal" tabindex="-1" aria-labelledby="academicModalLabel" aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <form method="post" action="<?= base_url('evaluation/saveAcademic') ?>">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="academicModalLabel">Add Academic Year</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="mb-3">
-                                    <label for="school_year" class="form-label">School Year (e.g., 2024-2025):</label>
-                                    <input type="text" name="school_year" id="school_year" class="form-control" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="semester" class="form-label">Semester:</label>
-                                    <select name="semester" id="semester" class="form-control" required>
-                                        <option value="1">1st Semester</option>
-                                        <option value="2">2nd Semester</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                <button type="submit" class="btn btn-primary">Save Academic Year</button>
-                            </div>
-                        </form>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="school_year" class="form-label">School Year (e.g., 2024-2025):</label>
+                        <input type="text" name="school_year" id="school_year" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="semester" class="form-label">Semester:</label>
+                        <select name="semester" id="semester" class="form-control" required>
+                            <option value="1">1st Semester</option>
+                            <option value="2">2nd Semester</option>
+                        </select>
                     </div>
                 </div>
-            </div>
-        </div>
-
-            <footer class="py-4 bg-light mt-auto">
-                <div class="container-fluid px-4">
-                    <div class="d-flex align-items-center justify-content-between small">
-                        <div class="text-muted">Copyright &copy; Your Website 2023</div>
-                        <div>
-                            <a href="#">Privacy Policy</a>
-                            &middot;
-                            <a href="#">Terms &amp; Conditions</a>
-                        </div>
-                    </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save Academic Year</button>
                 </div>
-            </footer>
+            </form>
         </div>
     </div>
+</div>
+
+
+
+</div>
+
+
+
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
