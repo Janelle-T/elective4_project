@@ -9,7 +9,7 @@ use CodeIgniter\Router\RouteCollection;
 // Authentication routes for login, logout, and dashboards
 $routes->group('', ['namespace' => 'App\Controllers'], function($routes) {
     // Login and logout routes
-    $routes->get('login', 'AuthController::loginForm');  // Show login form
+    $routes->get('/', 'AuthController::loginForm');  // Show login form
     $routes->post('auth/login', 'AuthController::login');  // Handle login POST request
     $routes->get('logout', 'AuthController::logout');  // Handle logout
     // User dashboards (admin, student, faculty)
@@ -38,6 +38,7 @@ $routes->group('admin', function($routes) {
 
     $routes->get('list', 'AdminAuthController::admin_list');
     $routes->get('getAdminList', 'AdminAuthController::getAdminList');
+
 
 
 });
@@ -97,7 +98,10 @@ $routes->group('evaluation', function($routes) {
 
     // Evaluation Answer Routes
     $routes->get('form', 'EvaluationAnswerController::index'); // Access the evaluation form
-    $routes->match(['get', 'post'], 'submit', 'EvaluationAnswerController::submit');
+    $routes->match(['GET', 'POST'], 'submit', 'EvaluationAnswerController::submit');
+
+    $routes->get('sentiment', 'Sentiment_controller::index');
+
 });
 
 
@@ -110,3 +114,5 @@ $routes->group('evaluation-dates', function($routes) {
     $routes->post('update/(:num)', 'EvaluationDateController::update/$1'); // Update specific evaluation date
     $routes->get('delete/(:num)', 'EvaluationDateController::delete/$1'); // Delete specific evaluation date
 });
+
+
