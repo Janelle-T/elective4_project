@@ -13,11 +13,11 @@
         <table border="1">
             <thead>
                 <tr>
-                    <th>Text</th>
-                    <th>Negative</th>
-                    <th>Neutral</th>
-                    <th>Positive</th>
-                    <th>Predicted Label</th>
+                    <th> ---Text--- </th>
+                    <th> ---Negative--- </th>
+                    <th> ---Neutral--- </th>
+                    <th> ---Positive--- </th>
+                    <th> ---Predicted Label--- </th>
                 </tr>
             </thead>
             <tbody>
