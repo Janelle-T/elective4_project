@@ -101,13 +101,9 @@ class StudentAuthController extends BaseController
 
     public function dashboard()
     {
-        $evaluationDateModel = new EvaluationDateModel(); // Instantiate the correct model
+        $evaluationDateModel = new EvaluationDateModel();
         $data['evaluationDates'] = $evaluationDateModel->getEvaluationDates();
-        $data['isEvaluationOpen'] = $evaluationDateModel->isEvaluationOpen();
-
-        // Add this debugging line:
-        log_message('debug', "Data passed to view: " . json_encode($data));
-
+        $data['isEvaluationOpen'] = $evaluationDateModel->isEvaluationOpen(); // Crucial: set this variable
         return view('student/student_dash', $data);
     }
 
