@@ -6,12 +6,10 @@ use CodeIgniter\Model;
 
 class EvaluationDateModel extends Model
 {
-    protected $table = 'evaluation_dates';  // The name of the table
-    protected $primaryKey = 'id';  // Primary key for the table
-    protected $allowedFields = ['open_datetime', 'close_datetime'];  // Fields you want to be insertable or updatable
-    protected $useTimestamps = true;  // Automatically manage created_at and updated_at timestamps
-
-    // Automatically format date fields before saving them
+    protected $table = 'evaluation_dates';
+    protected $primaryKey = 'id';
+    protected $allowedFields = ['open_datetime', 'close_datetime'];
+    protected $useTimestamps = true;
     protected $beforeInsert = ['formatDateTime'];
     protected $beforeUpdate = ['formatDateTime'];
 
@@ -29,14 +27,45 @@ class EvaluationDateModel extends Model
 
     private function formatDate($date)
     {
-        // Format the date to 'Y-m-d H:i:s' before saving to the database
         return date('Y-m-d H:i:s', strtotime($date));
+    }
+
+    public function dashboard()
+    {
+        $evaluationDateModel = new EvaluationDateModel();
+        $data['evaluationDates'] = $evaluationDateModel->getEvaluationDates();
+        return view('student_dash', $data);
     }
 
     // Method to fetch all evaluation dates from the database
     public function getEvaluationDates()
     {
-        // Use CodeIgniter query builder to fetch all records from the table
-        return $this->db->table($this->table)->get()->getResultArray();
+        $query = $this->db->table($this->table)->get();
+        $results = $query->getResultArray();
+
+        // Add debugging output here:
+        if (empty($results)) {
+            log_message('error', "No evaluation dates found in the database.");
+        } else {
+            log_message('debug', "Evaluation dates fetched successfully: " . json_encode($results));
+        }
+
+        return $results;
+    }
+
+    public function isEvaluationOpen()
+    {
+        $now = date('Y-m-d H:i:s');
+        $evaluationDates = $this->orderBy('open_datetime', 'ASC')->findAll(); // Get all dates, ordered
+
+        foreach ($evaluationDates as $evaluationDate) {
+            $openTime = $evaluationDate['open_datetime'];
+            $closeTime = $evaluationDate['close_datetime'];
+            if ($now >= $openTime && $now <= $closeTime) {
+                return true; // Found an active evaluation period
+            }
+        }
+
+        return false; // No active evaluation period found
     }
 }

@@ -80,7 +80,7 @@
                 <h5 class="modal-title" id="editModalLabel">Edit Evaluation Date</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="<?= base_url('evaluation-dates/edit') ?> method="post" id="editForm">
+            <form action="<?= base_url('evaluation-dates/edit') ?> method="post id="editForm">
                 <div class="modal-body">
                     <input type="hidden" name="id" id="edit-id">
                     <div class="mb-3">

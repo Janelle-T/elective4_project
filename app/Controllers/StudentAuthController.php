@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 use App\Models\StudentModel;
+use App\Models\EvaluationDateModel; // Added this line
 use Config\Services;
 
 
@@ -12,9 +13,27 @@ class StudentAuthController extends BaseController
     {
         helper(['form']);
     }
+    public function showEvaluationDates() {
+        $evaluationDateModel = new EvaluationDateModel();
+        $evaluationDates = $evaluationDateModel->getEvaluationDates();
+
+        $formattedEvents = [];
+        foreach ($evaluationDates as $date) {
+            $formattedEvents[] = [
+                'title' => 'Evaluation Open',
+                'start' => $date['open_datetime'], //Already in correct format
+                'end' => $date['close_datetime']  //Already in correct format
+            ];
+        }
+
+        return $this->response->setJSON($formattedEvents);
+    }
+
     public function index()
     {
-        return view('student/student_dash'); // Ensure this view exists
+        $evaluationDateModel = new EvaluationDateModel();
+        $data['isEvaluationOpen'] = $evaluationDateModel->isEvaluationOpen();
+        return view('student/student_dash', $data);
     }
 
     // Student registration form view
@@ -78,6 +97,18 @@ class StudentAuthController extends BaseController
             session()->setFlashdata('error', 'Failed to register student.');
             return redirect()->to('student/sign_up'); // Redirect back to registration page
         }
+    }
+
+    public function dashboard()
+    {
+        $evaluationDateModel = new EvaluationDateModel(); // Instantiate the correct model
+        $data['evaluationDates'] = $evaluationDateModel->getEvaluationDates();
+        $data['isEvaluationOpen'] = $evaluationDateModel->isEvaluationOpen();
+
+        // Add this debugging line:
+        log_message('debug', "Data passed to view: " . json_encode($data));
+
+        return view('student/student_dash', $data);
     }
 
     // Student email verification

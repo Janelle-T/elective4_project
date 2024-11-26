@@ -15,6 +15,9 @@ $routes->group('', ['namespace' => 'App\Controllers'], function($routes) {
     // User dashboards (admin, student, faculty)
     $routes->get('admin/dashboard', 'AdminAuthController::index', ['filter' => 'auth:admin']); // Admin dashboard
     $routes->get('student/dashboard', 'StudentAuthController::index', ['filter' => 'auth:student']); // Student dashboard
+
+    $routes->get('student/showEvaluationDates', 'StudentAuthController::showEvaluationDates');
+
     $routes->get('faculty/dashboard', 'FacultyAuthController::index', ['filter' => 'auth:faculty']); // Faculty dashboard
 });
 

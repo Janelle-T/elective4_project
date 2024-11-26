@@ -10,6 +10,7 @@
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.1/css/all.css" rel="stylesheet">
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
     <script src="<?= base_url('assets/js/scripts.js') ?>"></script>
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.0/main.min.css' rel='stylesheet' />
 </head>
 <body class="sb-nav-fixed">
     <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
@@ -56,7 +57,11 @@
                         </a>
                         <div class="collapse" id="collapseFacultyEvaluation" aria-labelledby="headingFacultyEvaluation" data-bs-parent="#sidenavAccordion">
                             <nav class="sb-sidenav-menu-nested nav">
-                                <a class="nav-link" href="<?= base_url('evaluation/form') ?>"><i class="fas fa-file-alt"></i> Evaluation Form</a>
+                                <?php if ($isEvaluationOpen): ?>
+                                    <a class="nav-link" href="<?= base_url('evaluation/form') ?>"><i class="fas fa-file-alt"></i> Evaluation Form</a>
+                                <?php else: ?>
+                                    <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true"><i class="fas fa-file-alt"></i> Evaluation Form (Currently Unavailable)</a>
+                                <?php endif; ?>
                             </nav>
                         </div>
                     </div>
@@ -68,17 +73,12 @@
                 <div class="container-fluid px-4">
                     <div class="card mb-4">
                         <div class="card-body">
-                            <section>
-                                <center>
-                                    <div class="header">
-                                        <div><font size="5"><b>University of Science and Technology of Southern Philippines</b></font></div>
-                                        <div><font size="3"><i>Alubijid | Balubal | Cagayan de Oro | Claveria | Jasaan | Oroquieta | Panaon | Villanueva</i></font></div>
-                                        <div><font size="4"><b>PERFORMANCE EVALUATION AS RATED BY STUDENTS</b></font></div>
-                                        <div><font size="4"><b>FIRST SEMESTER AY 2022-2023</b></font></div>
-                                        <div><font size="4"><b>CLAVERIA CAMPUS</b></font></div>
-                                    </div>
-                                </center>
-                            </section>
+                            <div id="calendar"></div>
+                            <?php if ($isEvaluationOpen): ?>
+                                <a href="<?= base_url('evaluation/form') ?>" class="btn btn-primary mt-3">Access Evaluation Form</a>
+                            <?php else: ?>
+                                <p class="mt-3">The Evaluation Form is currently closed. Please check back later.</p>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -99,8 +99,22 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.9.0/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.0/index.global.min.js"></script>
+    
     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                events: '<?= base_url('student/showEvaluationDates') ?>', // Fetch events from the controller
+                eventClick: function(info) {
+                    //This will not run because the events is not an array of objects
+                    //alert('Evaluation Date ID: ' + info.event.id); 
+                }
+            });
+            calendar.render();
+        });
+
     function logout() {
         if (confirm('Are you sure you want to logout?')) {
             fetch('<?= base_url('auth/logout') ?>', {
