@@ -14,106 +14,117 @@ class EvaluationDateController extends BaseController
         $this->evaluationDateModel = new EvaluationDateModel();
     }
 
-    // Show all evaluation dates (for the calendar view)
+    /**
+     * Display a list of all evaluation dates.
+     */
     public function index()
     {
-        // Fetch all evaluation dates from the database
         $data['evaluationDates'] = $this->evaluationDateModel->findAll();
-        
-        // Load the view and pass the evaluation dates
         return view('admin/evaluation_dates', $data);
     }
 
-    // Show the form to create a new evaluation date
+    /**
+     * Show the form to create a new evaluation date.
+     */
     public function create()
     {
         return view('admin/create_evaluation_date');
     }
 
-    // Store a new evaluation date
+    /**
+     * Store a newly created evaluation date in the database.
+     */
     public function store()
     {
-        // Validation
+        // Validate input
         if (!$this->validate([
-            'open_datetime' => 'required',
-            'close_datetime' => 'required',
+            'open_datetime' => 'required|valid_date[Y-m-d H:i:s]',
+            'close_datetime' => 'required|valid_date[Y-m-d H:i:s]|check_close_date'
         ])) {
-            return redirect()->to('/evaluation-dates/create')->withInput();
+            return redirect()->to('/evaluation-dates/create')
+                ->withInput()
+                ->with('errors', $this->validator->getErrors());
         }
 
-        // Save the evaluation date to the database
+        // Save the new evaluation date
         $this->evaluationDateModel->save([
             'open_datetime' => $this->request->getPost('open_datetime'),
             'close_datetime' => $this->request->getPost('close_datetime'),
         ]);
 
-        return redirect()->to('/evaluation-dates')->with('message', 'Evaluation Date created successfully');
+        return redirect()->to('/evaluation-dates')->with('message', 'Evaluation Date created successfully.');
     }
 
-    // Show the form to edit an evaluation date
+    /**
+     * Show the form to edit an existing evaluation date.
+     */
     public function edit($id)
     {
-        // Fetch the evaluation date by ID
         $data['evaluationDate'] = $this->evaluationDateModel->find($id);
 
-        // Check if the evaluation date exists
         if (empty($data['evaluationDate'])) {
-            throw new \CodeIgniter\Exceptions\PageNotFoundException("Evaluation Date with ID $id not found");
+            throw new \CodeIgniter\Exceptions\PageNotFoundException("Evaluation Date with ID $id not found.");
         }
 
         return view('admin/edit_evaluation_date', $data);
     }
 
-    // Update an existing evaluation date
+    /**
+     * Update an existing evaluation date in the database.
+     */
     public function update($id)
     {
-        // Validation
+        // Validate input
         if (!$this->validate([
-            'open_datetime' => 'required',
-            'close_datetime' => 'required',
+            'open_datetime' => 'required|valid_date[Y-m-d H:i:s]',
+            'close_datetime' => 'required|valid_date[Y-m-d H:i:s]|check_close_date'
         ])) {
-            return redirect()->to("/evaluation-dates/edit/$id")->withInput();
+            return redirect()->to("/evaluation-dates/edit/$id")
+                ->withInput()
+                ->with('errors', $this->validator->getErrors());
         }
 
-        // Update the evaluation date in the database
+        // Update the evaluation date
         $this->evaluationDateModel->update($id, [
             'open_datetime' => $this->request->getPost('open_datetime'),
             'close_datetime' => $this->request->getPost('close_datetime'),
         ]);
 
-        return redirect()->to('/evaluation-dates')->with('message', 'Evaluation Date updated successfully');
+        return redirect()->to('/evaluation-dates')->with('message', 'Evaluation Date updated successfully.');
     }
 
-    // Delete an evaluation date
+    /**
+     * Delete an evaluation date from the database.
+     */
     public function delete($id)
     {
-        // Check if the evaluation date exists
         if (!$this->evaluationDateModel->find($id)) {
-            throw new \CodeIgniter\Exceptions\PageNotFoundException("Evaluation Date with ID $id not found");
+            throw new \CodeIgniter\Exceptions\PageNotFoundException("Evaluation Date with ID $id not found.");
         }
 
-        // Delete the evaluation date from the database
         $this->evaluationDateModel->delete($id);
 
-        return redirect()->to('/evaluation-dates')->with('message', 'Evaluation Date deleted successfully');
+        return redirect()->to('/evaluation-dates')->with('message', 'Evaluation Date deleted successfully.');
     }
 
-    // Show evaluation dates (for the calendar)
+    /**
+     * Provide evaluation dates as JSON for the calendar view.
+     */
     public function showEvaluationDates()
     {
-        // Fetch evaluation dates from the model
         $evaluationDates = $this->evaluationDateModel->findAll();
 
-        // Return them as a JSON response (for calendar events)
-        return $this->response->setJSON(array_map(function($date) {
+        $events = array_map(function ($date) {
             return [
-                'title' => 'Evaluation: ' . $date['id'],
+                'title' => 'Evaluation Period',
                 'start' => $date['open_datetime'],
                 'end' => $date['close_datetime'],
                 'url' => base_url("/evaluation-dates/view/{$date['id']}"),
-                'color' => '#007bff', 
-                'textColor' => 'white'
+                'color' => '#007bff',
+                'textColor' => '#ffffff',
             ];
-        }, $evaluationDates));
+        }, $evaluationDates);
+
+        return $this->response->setJSON($events);
     }
 }
