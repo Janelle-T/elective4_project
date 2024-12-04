@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Evaluation Results</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
@@ -27,49 +28,87 @@
             <p><?= esc($errorMessage) ?></p>
         <?php endif; ?>
 
-        <!-- Display Evaluation Results if available -->
-        <?php if (isset($evaluations) && !empty($evaluations)): ?>
-            <h2>Evaluation Results for Academic Year: <?= esc($selectedAcademic['school_year']) ?> - 
+        <!-- Display Summarized Evaluation Results if available -->
+        <?php if (isset($summaryResults) && !empty($summaryResults)): ?>
+            <h2>Summary of Ratings for Academic Year: <?= esc($selectedAcademic['school_year']) ?> - 
                 <?= esc($selectedAcademic['semester'] == 1 ? '1st Semester' : '2nd Semester') ?></h2>
             
             <table border="1">
                 <thead>
                     <tr>
-                        <th>Comment</th>
-                        <th>School Year</th>
-                        <th>Semester</th>
-                        <th>Questions and Ratings</th>
-                        <th>Date</th>
+                        <th>Question</th>
+                        <th>Average Rating</th>
+                        <th>Total Evaluations</th>
+                        <th>Chart</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php
-                    $currentEvaluationId = null;
-                    $totalEvaluations = count($evaluations);
-                    foreach ($evaluations as $index => $evaluation):
-                        if ($currentEvaluationId !== $evaluation['evaluation_id']):
-                            $currentEvaluationId = $evaluation['evaluation_id'];
-                    ?>
+                    <?php foreach ($summaryResults as $index => $result): ?>
                         <tr>
-                            <td><?= esc($evaluation['comment']) ?></td>
-                            <td><?= esc($evaluation['school_year']) ?></td>
-                            <td><?= esc($evaluation['semester'] == 1 ? 'First Semester' : 'Second Semester') ?></td>
-                            <td>
-                                <ul>
-                    <?php endif; ?>
-                                <li><?= esc($evaluation['question_text']) ?>: <?= esc($evaluation['rating_rate']) ?></li>
-                    <?php 
-                        // Check if the current evaluation is the last one for this evaluation_id
-                        if ($index + 1 == $totalEvaluations || $evaluations[$index + 1]['evaluation_id'] !== $currentEvaluationId):
-                    ?>
-                                </ul>
-                            </td>
-                            <td><?= esc(date('F d, Y', strtotime($evaluation['created_at']))) ?></td>
+                            <td><?= esc($result['question_text']) ?></td>
+                            <td><?= number_format($result['average_rating'], 2) ?></td>
+                            <td><?= esc($result['total_evaluations']) ?></td>
+                            <td><canvas id="chart_<?= $index ?>"></canvas></td>
                         </tr>
-                    <?php 
-                        endif;
-                    endforeach;
-                    ?>
+
+                        <!-- Create a chart for each result -->
+                        <script>
+                            var ctx = document.getElementById('chart_<?= $index ?>').getContext('2d');
+
+                            var individualRatings = <?= json_encode($result['individual_ratings']) ?>; // Assuming this is an array of individual ratings
+                            var averageRating = <?= esc($result['average_rating']) ?>;
+
+                            // Color mapping for individual ratings
+                            var ratingColors = {
+                                1: 'rgba(255, 99, 132, 0.2)', // Red
+                                2: 'rgba(255, 159, 64, 0.2)', // Orange
+                                3: 'rgba(255, 205, 86, 0.2)', // Yellow
+                                4: 'rgba(75, 192, 192, 0.2)', // Green
+                                5: 'rgba(54, 162, 235, 0.2)'  // Blue
+                            };
+
+                            // Prepare individual ratings data and colors
+                            var individualData = [0, 0, 0, 0, 0]; // Array to hold counts for ratings 1-5
+                            var individualRatingColors = []; // Array to hold colors
+
+                            individualRatings.forEach(function(rating) {
+                                if (rating.rate >= 1 && rating.rate <= 5) {
+                                    individualData[rating.rate - 1]++; // Increment the count for the corresponding rating
+                                    individualRatingColors.push(ratingColors[rating.rate]); // Store the color
+                                }
+                            });
+
+                            var chart = new Chart(ctx, {
+                                type: 'bar', // Change type if needed
+                                data: {
+                                    labels: ['1', '2', '3', '4', '5'], // Ratings 1-5
+                                    datasets: [
+                                        {
+                                            label: 'Average Rating',
+                                            data: [averageRating],
+                                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                            borderColor: 'rgba(75, 192, 192, 1)',
+                                            borderWidth: 1
+                                        },
+                                        {
+                                            label: 'Individual Ratings',
+                                            data: individualData, // Counts for each rating (1-5)
+                                            backgroundColor: individualRatingColors, // Color array
+                                            borderColor: 'rgba(0, 0, 0, 0.1)',
+                                            borderWidth: 1
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true
+                                        }
+                                    }
+                                }
+                            });
+                        </script>
+                    <?php endforeach; ?>
                 </tbody>
             </table>
         <?php endif; ?>

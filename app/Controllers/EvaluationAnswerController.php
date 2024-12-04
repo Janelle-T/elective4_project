@@ -157,27 +157,29 @@ class EvaluationAnswerController extends BaseController
         return $finalRating;
     }
 
-  public function evaluationResults()
+public function evaluationResults()
 {
     // Get the faculty_id from the session (e.g., after faculty login)
-    $facultyId = session()->get('faculty_id'); // or whatever session variable you store it in
+    $facultyId = session()->get('faculty_id');
 
-    // Ensure that faculty_id exists in the session
+    // Ensure faculty_id exists in the session
     if (!$facultyId) {
         return redirect()->to('/login')->with('error', 'Please log in first.');
     }
 
     // Get the academic_id from the POST request
     $academicId = $this->request->getPost('academic_id');
-    
+
     // If academic_id is not provided, show the academic options form only
     if (!$academicId) {
         $academicOptions = $this->getAcademicOptions();
-        return view('faculty/evaluation_results', ['academicOptions' => $academicOptions]);
+        return view('faculty/evaluation_results', [
+            'academicOptions' => $academicOptions
+        ]);
     }
 
-    // Fetch evaluations and their answers based on facultyId and academicId
-    $evaluations = $this->getEvaluationsWithAnswers($facultyId, $academicId);
+    // Fetch summarized evaluations based on facultyId and academicId
+    $summaryResults = $this->getSummarizedEvaluationResults($facultyId, $academicId);
 
     // Fetch available academic options (for the form)
     $academicOptions = $this->getAcademicOptions();
@@ -191,8 +193,8 @@ class EvaluationAnswerController extends BaseController
         }
     }
 
-    // Check if any evaluations were found
-    if (empty($evaluations)) {
+    // Check if any summary results were found
+    if (empty($summaryResults)) {
         return view('faculty/evaluation_results', [
             'academicOptions' => $academicOptions,
             'selectedAcademic' => $selectedAcademic,
@@ -200,38 +202,182 @@ class EvaluationAnswerController extends BaseController
         ]);
     }
 
-    // Return the view with evaluations and academic options
+    // Process each summary result to include tokens, sentiment, and individual ratings
+    foreach ($summaryResults as &$result) {
+        // Tokenize all comments (combine comments from all students for this question)
+        $comments = $result['tokenized_comments']; // This is a concatenated string of all comments
+        $tokenizedComment = $this->tokenizeComment($comments); // Tokenize the entire string
+        
+        // Analyze sentiment for the concatenated comment
+        $sentiment = $this->analyzeSentiment($comments);
+        
+        // Add tokenized comment and sentiment to the result
+        $result['tokenized_comment'] = implode(' ', $tokenizedComment); // Join tokens into a string for display
+        $result['sentiment'] = $sentiment;
+
+        // Fetch individual ratings (assuming they are stored in a specific way)
+        $result['individual_ratings'] = $this->getIndividualRatings($result['evaluation_question_id'], $facultyId, $academicId);
+    }
+
+    // Return the view with summarized results including tokens, sentiment, and individual ratings
     return view('faculty/evaluation_results', [
-        'evaluations' => $evaluations,
+        'summaryResults' => $summaryResults, // Include tokenized comments, sentiment, and individual ratings
         'academicOptions' => $academicOptions,
         'selectedAcademic' => $selectedAcademic // Pass the selected academic details
     ]);
 }
 
-
-private function getEvaluationsWithAnswers($facultyId, $academicId)
+private function getSummarizedEvaluationResults($facultyId, $academicId)
 {
     return $this->db->table('evaluation')
         ->select([
-            'evaluation.id AS evaluation_id',
-            'evaluation.comment',
-            'academic.school_year',
-            'academic.semester',
-            'evaluation.created_at',
-            'evaluation_answer.rating_id',
             'evaluation_answer.evaluation_question_id',
-            'evaluation_question.question_text AS question_text',  // Adjusted to ensure proper alias
-            'rating.rate AS rating_rate' // Ensure proper column aliases
+            'evaluation_question.question_text',
+            'AVG(rating.rate) AS average_rating', // Calculate average rating per question
+            'COUNT(DISTINCT evaluation.id) AS total_evaluations', // Count distinct evaluations
+            'GROUP_CONCAT(DISTINCT evaluation.comment ORDER BY evaluation.created_at) AS tokenized_comments' // Concatenate all comments
         ])
-        ->join('academic', 'evaluation.academic_id = academic.id')
         ->join('evaluation_answer', 'evaluation.id = evaluation_answer.evaluation_id', 'left')
         ->join('evaluation_question', 'evaluation_answer.evaluation_question_id = evaluation_question.id', 'left')
         ->join('rating', 'evaluation_answer.rating_id = rating.id', 'left')
         ->where('evaluation.faculty_id', $facultyId)
         ->where('evaluation.academic_id', $academicId)
+        ->groupBy('evaluation_answer.evaluation_question_id') // Group by question
         ->get()
         ->getResultArray(); // Fetch results as an array
 }
+
+// Fetch individual ratings for a given question, faculty, and academic semester
+private function getIndividualRatings($evaluationQuestionId, $facultyId, $academicId)
+{
+    return $this->db->table('evaluation')
+        ->select('rating.rate')
+        ->join('evaluation_answer', 'evaluation.id = evaluation_answer.evaluation_id')
+        ->join('rating', 'evaluation_answer.rating_id = rating.id')
+        ->where('evaluation.faculty_id', $facultyId)
+        ->where('evaluation.academic_id', $academicId)
+        ->where('evaluation_answer.evaluation_question_id', $evaluationQuestionId)
+        ->get()
+        ->getResultArray(); // Fetch all individual ratings
+}
+
+
+private function tokenizeComment($comments)
+{
+    // Expanded list of common stop words
+    $stopWords = [
+        'i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'your', 'yours',
+        'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', 'her', 'hers', 'herself',
+        'it', 'its', 'itself', 'they', 'them', 'their', 'theirs', 'themselves', 'this', 'that',
+        'these', 'those', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has',
+        'had', 'having', 'do', 'does', 'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if', 'or',
+        'because', 'as', 'until', 'while', 'of', 'at', 'by', 'for', 'with', 'about', 'against', 'between',
+        'into', 'through', 'during', 'before', 'after', 'above', 'below', 'to', 'from', 'up', 'down',
+        'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there',
+        'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some',
+        'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 's', 't', 'can', 'will',
+        'just', 'don', 'should', 'now', 'd', 'll', 'm', 'o', 're', 've', 'y', 'ain', 'aren', 'couldn', 'didn', 'doesn',
+        'hadn', 'hasn', 'haven', 'isn', 'ma', 'mightn', 'mustn', 'needn', 'shan', 'shouldn', 'wasn', 'weren', 'won', 'wouldn'
+    ];
+
+    // Tokenize the comment by splitting into words using regex
+    $tokens = preg_split('/[\s,.\'";!?(){}\[\]:]+/', trim($comments), -1, PREG_SPLIT_NO_EMPTY);
+
+    // Convert all tokens to lowercase
+    $tokens = array_map('strtolower', $tokens);
+
+    // Remove stop words
+    $tokens = array_filter($tokens, function($word) use ($stopWords) {
+        return !in_array($word, $stopWords);
+    });
+
+    // Re-index the array after filtering
+    $tokens = array_values($tokens);
+
+    return $tokens;
+}
+
+private function analyzeSentiment($comment)
+{
+    // Expanded list of positive, negative, and neutral words
+    $positiveWords = [
+        'good', 'great', 'awesome', 'fantastic', 'amazing', 'excellent', 'positive', 'happy', 
+        'joyful', 'love', 'best', 'wonderful', 'satisfied', 'incredible', 'delightful', 'superb', 
+        'beautiful', 'pleasant', 'brilliant', 'inspiring', 'remarkable'
+    ];
+
+    $negativeWords = [
+        'bad', 'terrible', 'awful', 'horrible', 'poor', 'disappointing', 'upset', 'sad', 'angry', 
+        'frustrated', 'hate', 'worst', 'unpleasant', 'dislike', 'failed', 'regret', 'miserable', 
+        'annoying', 'dreadful', 'upsetting', 'frustrating', 'disgusting', 'tragic', 'distressing', 
+        'painful', 'boring', 'strict', 'nothing', 'learn', 'teach', 'unhelpful', 'hard', 'unpleasant'
+    ];
+
+    $neutralWords = [
+        'okay', 'fine', 'average', 'normal', 'neutral', 'so-so', 'indifferent', 'typical', 'usual', 
+        'regular', 'okayish', 'mediocre', 'fair', 'predictable', 'standard'
+    ];
+
+    // Define negation words
+    $negationWords = ['don\'t', 'not', 'never', 'nothing', 'no', 'none', 'cannot', 'isn\'t', 'wasn\'t'];
+
+    // Convert comment to lowercase for case-insensitive comparison
+    $comment = strtolower($comment);
+
+    // Tokenize the comment
+    $tokens = $this->tokenizeComment($comment);
+
+    // Initialize counters
+    $positiveCount = 0;
+    $negativeCount = 0;
+    $neutralCount = 0;
+    $negationFlag = false; // Flag to indicate if negation is encountered
+
+    // Loop through each token and adjust sentiment counts
+    foreach ($tokens as $token) {
+        // Check for negation words
+        if (in_array($token, $negationWords)) {
+            $negationFlag = true; // Set negation flag to true
+        }
+
+        // Check if the current token is in positive, negative, or neutral word lists
+        if (in_array($token, $positiveWords)) {
+            // Reverse sentiment if negation flag is set
+            if ($negationFlag) {
+                $negativeCount++; // Negated positive word treated as negative
+                $negationFlag = false; // Reset negation flag after use
+            } else {
+                $positiveCount++;
+            }
+        } elseif (in_array($token, $negativeWords)) {
+            // Reverse sentiment if negation flag is set
+            if ($negationFlag) {
+                $positiveCount++; // Negated negative word treated as positive
+                $negationFlag = false; // Reset negation flag after use
+            } else {
+                $negativeCount++;
+            }
+        } elseif (in_array($token, $neutralWords)) {
+            $neutralCount++;
+        }
+    }
+
+    // Determine sentiment based on the counts
+    if ($positiveCount > $negativeCount && $positiveCount > $neutralCount) {
+        return 'Positive';
+    } elseif ($negativeCount > $positiveCount && $negativeCount > $neutralCount) {
+        return 'Negative';
+    } elseif ($neutralCount >= $positiveCount && $neutralCount >= $negativeCount) {
+        return 'Neutral';
+    } else {
+        return 'Neutral'; // Default to neutral if counts are the same or no clear sentiment
+    }
+}
+
+
+
+
+
 
 private function getAcademicOptions()
 {
@@ -242,6 +388,19 @@ private function getAcademicOptions()
         ->get()
         ->getResultArray();
 }
+
+
+
+
+
+/**
+ * Analyzes sentiment of the comment (improved approach).
+ * @param string $comment
+ * @return string
+ */
+
+
+
 
 
 
