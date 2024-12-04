@@ -15,16 +15,23 @@
             <select name="academic_id" id="academic_id" required>
                 <option value="" disabled selected>Choose...</option>
                 <?php foreach ($academicOptions as $academic): ?>
-                    <option value="<?= esc($academic['id']) ?>">
-                        <?= esc($academic['school_year']) ?> - <?= esc($academic['semester'] == 1 ? 'First Semester' : 'Second Semester') ?>
+                    <option value="<?= esc($academic['id']) ?>" <?= isset($selectedAcademic) && $selectedAcademic['id'] == $academic['id'] ? 'selected' : '' ?>>
+                        <?= esc($academic['school_year']) ?> - <?= esc($academic['semester'] == 1 ? '1st Semester' : '2nd Semester') ?>
                     </option>
                 <?php endforeach; ?>
             </select>
             <button type="submit">View Results</button>
         </form>
 
-        <!-- Display Evaluation Results -->
-        <?php if (!empty($evaluations)): ?>
+        <?php if (isset($errorMessage)): ?>
+            <p><?= esc($errorMessage) ?></p>
+        <?php endif; ?>
+
+        <!-- Display Evaluation Results if available -->
+        <?php if (isset($evaluations) && !empty($evaluations)): ?>
+            <h2>Evaluation Results for Academic Year: <?= esc($selectedAcademic['school_year']) ?> - 
+                <?= esc($selectedAcademic['semester'] == 1 ? '1st Semester' : '2nd Semester') ?></h2>
+            
             <table border="1">
                 <thead>
                     <tr>
@@ -36,10 +43,11 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <?php 
+                    <?php
                     $currentEvaluationId = null;
-                    foreach ($evaluations as $evaluation): 
-                        if ($currentEvaluationId !== $evaluation['evaluation_id']): 
+                    $totalEvaluations = count($evaluations);
+                    foreach ($evaluations as $index => $evaluation):
+                        if ($currentEvaluationId !== $evaluation['evaluation_id']):
                             $currentEvaluationId = $evaluation['evaluation_id'];
                     ?>
                         <tr>
@@ -49,22 +57,21 @@
                             <td>
                                 <ul>
                     <?php endif; ?>
-                                    <li><?= esc($evaluation['question']) ?>: <?= esc($evaluation['rating_value']) ?></li>
+                                <li><?= esc($evaluation['question_text']) ?>: <?= esc($evaluation['rating_rate']) ?></li>
                     <?php 
-                        if (next($evaluations)['evaluation_id'] !== $currentEvaluationId): 
+                        // Check if the current evaluation is the last one for this evaluation_id
+                        if ($index + 1 == $totalEvaluations || $evaluations[$index + 1]['evaluation_id'] !== $currentEvaluationId):
                     ?>
                                 </ul>
                             </td>
                             <td><?= esc(date('F d, Y', strtotime($evaluation['created_at']))) ?></td>
                         </tr>
                     <?php 
-                        endif; 
-                    endforeach; 
+                        endif;
+                    endforeach;
                     ?>
                 </tbody>
             </table>
-        <?php elseif ($_SERVER['REQUEST_METHOD'] === 'POST'): ?>
-            <p>No evaluations found for the selected semester.</p>
         <?php endif; ?>
     </div>
 </body>

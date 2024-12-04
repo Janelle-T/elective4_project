@@ -71,6 +71,11 @@ class AuthController extends Controller
                     'academic_id' => $activeAcademicSession['id'],  // Store the academic_id
                 ]);
 
+                // Check if the user is faculty and set faculty-specific session data
+                if ($userType == 'faculty') {
+                    session()->set('faculty_id', $user['id']);  // Store faculty_id for faculty-specific actions
+                }
+
                 // Redirect to the respective dashboard
                 return redirect()->to($redirectUrl);
             } else {
