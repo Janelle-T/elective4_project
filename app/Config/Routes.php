@@ -111,7 +111,8 @@ $routes->group('evaluation', function($routes) {
 
 
     //Evaluation Results
-    $routes->get('results/(:num)/(:num)', 'EvaluationAnswerController::evaluationResults/$1/$2');
+    $routes->match(['get', 'post'], 'results', 'EvaluationAnswerController::evaluationResults');
+
 });
 
 

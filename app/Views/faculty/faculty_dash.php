@@ -57,9 +57,12 @@
                         <div class="collapse" id="collapseFacultyEvaluation" aria-labelledby="headingFacultyEvaluation" data-bs-parent="#sidenavAccordion">
                             <nav class="sb-sidenav-menu-nested nav">
                                 <a class="nav-link" href="<?= base_url('/') ?>"><i class="fas fa-file-alt"></i> Evaluation Form</a>
-                                <a class="nav-link" href="<?= base_url("evaluation/results/{$facultyId}/{$academicId}") ?>">
+                                <a class="nav-link" href="<?= base_url("evaluation/results") ?>">
                                     <i class="fas fa-chart-line"></i> Evaluation Result
                                 </a>
+
+
+
                             </nav>
                         </div>
                     </div>

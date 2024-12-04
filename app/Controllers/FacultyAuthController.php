@@ -9,17 +9,25 @@ use CodeIgniter\Controller;
 
 class FacultyAuthController extends Controller
 {
-    public function __construct()
-    {
-        helper(['form']);
-    }
     public function index()
     {
         // Assuming facultyId is stored in the session after login
         $facultyId = session()->get('faculty_id'); // Replace with your actual session key
 
-        // Fetch the current academic session dynamically
-        $academicId = $this->getCurrentAcademicId(); // Function to get the current active academic ID
+        // Fetch the current academic ID (assuming you have a model for this)
+        $academicModel = new \App\Models\AcademicModel();
+        $currentAcademic = $academicModel->where('status', 1) // 1 for "Start"
+                                          ->orderBy('id', 'DESC')
+                                          ->first(); // Get the most recent active academic year
+
+        // Check if an active academic semester exists
+        if (!$currentAcademic) {
+            // Handle the case where no active academic semester exists
+            throw new \CodeIgniter\Exceptions\PageNotFoundException('No active academic semester found.');
+        }
+
+        // Extract the academic ID
+        $academicId = $currentAcademic['id'];
 
         // Pass the facultyId and academicId to the view
         return view('faculty/faculty_dash', [
@@ -27,27 +35,6 @@ class FacultyAuthController extends Controller
             'academicId' => $academicId
         ]);
     }
-
-    private function getCurrentAcademicId()
-    {
-        // Get the current year
-        $currentYear = date('Y'); // Current year (e.g., 2024)
-        $nextYear = $currentYear + 1; // Next year (e.g., 2025)
-
-        // Format the school year as "YYYY-YYYY"
-        $schoolYear = "{$currentYear}-{$nextYear}";
-
-        // Fetch the active academic session from the database
-        $academicSession = $this->db->table('academic')
-            ->where('school_year', $schoolYear)
-            ->where('status', 1) // Status 1 means "Start" (active)
-            ->get()
-            ->getRow();
-
-        return $academicSession ? $academicSession->id : null; // Return the academic ID if found
-    }
-
-
 
 
     // Faculty registration form view

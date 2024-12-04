@@ -142,35 +142,65 @@ class EvaluationAnswerController extends BaseController
         return $finalRating;
     }
 
-    public function evaluationResults($facultyId, $academicId)
-    {
-        // Instantiate the EvaluationModel
-        $evaluationModel = new EvaluationModel();
+public function evaluationResults()
+{
+    $facultyId = session()->get('faculty_id'); // Get the logged-in faculty ID
 
-        // Fetch evaluations for the given faculty and academic semester
-        $evaluations = $evaluationModel->getFacultyEvaluationsBySemester($facultyId, $academicId);
+    // Load the database instance
+    $db = \Config\Database::connect();
 
-        // Pass the evaluations data to the view
-        return view('faculty/evaluation_results', ['evaluations' => $evaluations]);
+    // Fetch available academic years and semesters
+    $academicOptions = $db->table('academic')
+        ->select(['id', 'school_year', 'semester'])
+        ->orderBy('school_year', 'DESC')
+        ->get()
+        ->getResultArray();
+
+    $evaluations = [];
+
+    // Check if form was submitted
+    if ($this->request->getMethod() === 'post') {
+        $academicId = $this->request->getPost('academic_id');
+
+        // Fetch evaluations based on selected semester
+        $evaluations = $this->getFacultyEvaluationsBySemester($facultyId, $academicId);
     }
 
+    // Pass data to the view
+    return view('faculty/evaluation_results', [
+        'academicOptions' => $academicOptions,
+        'evaluations' => $evaluations
+    ]);
+}
 
-    public function getFacultyEvaluationsBySemester($facultyId, $academicId)
-    {
-        // Load the database library
-        $db = \Config\Database::connect();
 
-        // Define the query to get evaluations for the selected faculty and academic semester
-        $query = $db->table('evaluation')
-                    ->select('evaluation.id, evaluation.student_id, evaluation.faculty_id, evaluation.academic_id, evaluation.comment, evaluation.created_at, evaluation.updated_at')
-                    ->join('academic', 'evaluation.academic_id = academic.id')
-                    ->where('evaluation.faculty_id', $facultyId)
-                    ->where('evaluation.academic_id', $academicId)
-                    ->get();
 
-        // Return the result
-        return $query->getResult();
-    }
+
+
+public function getFacultyEvaluationsBySemester($facultyId, $academicId)
+{
+    return $this->db->table('evaluation')
+        ->select([
+            'evaluation.id AS evaluation_id',
+            'evaluation.comment',
+            'evaluation.created_at',
+            'academic.school_year',
+            'academic.semester',
+            'evaluation_question.question',
+            'rating.rating_value'
+        ])
+        ->join('academic', 'evaluation.academic_id = academic.id')
+        ->join('evaluation_answer', 'evaluation.id = evaluation_answer.evaluation_id')
+        ->join('evaluation_question', 'evaluation_answer.evaluation_question_id = evaluation_question.id')
+        ->join('rating', 'evaluation_answer.rating_id = rating.id')
+        ->where('evaluation.faculty_id', $facultyId)
+        ->where('evaluation.academic_id', $academicId)
+        ->get()
+        ->getResultArray();
+}
+
+
+
 
 
     public function fetchResultsByFacultyWithSentiment($academicId = null)
