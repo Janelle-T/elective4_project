@@ -50,17 +50,33 @@
     <div class="container">
         <h1>Faculty Evaluation Form</h1>
 
+        <!-- Display validation errors -->
+        <?php if (session()->getFlashdata('errors')): ?>
+            <div class="alert alert-danger">
+                <ul>
+                    <?php foreach (session()->getFlashdata('errors') as $error): ?>
+                        <li><?= esc($error); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        <?php endif; ?>
+
+        <!-- Display general error message if evaluation already submitted -->
+        <?php if (session()->getFlashdata('error')): ?>
+            <div class="alert alert-danger">
+                <?= esc(session()->getFlashdata('error')); ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Evaluation Form -->
         <form method="post" action="<?= base_url('evaluation/submit'); ?>">
 
             <?php 
-            // Get session data for student_id and academic_id
             $studentId = session('studentId'); 
-            $academicId = session('academicId');  // Assuming academic_id is stored in the session after login
-
-            // If academic_id is not found in session, fetch it from the database where status is 1
+            $academicId = session('academicId');
             if (!$academicId) {
                 $academicId = model('App\Models\AcademicModel')->where('status', 1)->first()['id'];
-                session()->set('academicId', $academicId);  // Save academic_id in session
+                session()->set('academicId', $academicId);
             }
             ?>
 
@@ -71,17 +87,16 @@
             <!-- Faculty Dropdown -->
             <div class="mb-3">
                 <label for="faculty_id" class="form-label">Select Faculty</label>
-                <select class="form-select" id="faculty_id" name="faculty_id">
-                    <?php 
-                    // Assuming $facultyList is passed from the controller
-                    foreach ($facultyList as $faculty) : 
-                    ?>
-                        <option value="<?= $faculty['id']; ?>"><?= $faculty['full_name']; ?></option>
+                <select class="form-select" id="faculty_id" name="faculty_id" required>
+                    <option value="">Select Faculty</option> <!-- Default empty option -->
+                    <?php foreach ($facultyList as $faculty) : ?>
+                        <option value="<?= $faculty['id']; ?>"><?= htmlspecialchars($faculty['full_name']); ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
 
-            <!-- Rating Scale (Dynamically fetched from the database) -->
+
+            <!-- Rating Scale -->
             <div class="mb-3">
                 <table class="evaluation-table">
                     <thead>
@@ -116,46 +131,39 @@
                 </thead>
                 <tbody>
                     <?php 
-                    $criteria = model('App\Models\CriteriaModel')->findAll(); // Fetch criteria
-
+                    $criteria = model('App\Models\CriteriaModel')->findAll();
                     foreach ($criteria as $criterion) : 
                     ?>
                         <tr>
                             <td colspan="2" class="criteria-title"><?= $criterion['title']; ?></td>
                         </tr>
                         <?php 
-                        // Fetch questions under the current criteria
                         $questions = model('App\Models\EvaluationQuestionModel')->where('criteria_id', $criterion['id'])->findAll(); 
                         foreach ($questions as $question) : 
                         ?>
-                        <tr>
-                            <td><?= $question['question_text']; ?></td>
-                            <td>
-                                <div class="radio-group">
-                                    <?php 
-                                    $ratings = model('App\Models\RatingModel')->findAll();
-                                    foreach ($ratings as $rating) : 
-                                    ?>
-                                        <label>
-                                            <input type="radio" name="question_<?= $question['id']; ?>" value="<?= $rating['id']; ?>"> <?= $rating['rate']; ?>
-                                        </label>
-                                    <?php endforeach; ?>
-                                </div>
-                            </td>
-                        </tr>
-                    <?php endforeach; endforeach; ?>
-                    
+                            <tr>
+                                <td><?= $question['question_text']; ?></td>
+                                <td>
+                                    <div class="radio-group">
+                                        <?php 
+                                        foreach ($ratings as $rating) : 
+                                        ?>
+                                            <label>
+                                                <input type="radio" name="question_<?= $question['id']; ?>" value="<?= $rating['id']; ?>"> <?= $rating['rate']; ?>
+                                            </label>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; endforeach; ?>
                     <tr>
-                        <td>Final Rating (This is calculated automatically)</td>
-                        <td><input type="text" name="final_rating" readonly></td> 
-                    </tr>
-
-                    <tr>
-                        <td>Overall Comments (Minimum 10 words)</td>
-                        <td>
-                            <textarea class="form-control" id="comment" name="comment" rows="3" required minlength="10"></textarea>
+                        <td colspan="2">
+                            <label for="comment" class="form-label fw-bold">Overall Comments (Minimum 10 words in English)</label>
+                            <textarea class="form-control" id="comment" name="comment" rows="6" required minlength="10"></textarea>
                         </td>
                     </tr>
+
+
                 </tbody>
             </table>
 
@@ -165,37 +173,5 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // JavaScript to calculate and display the final rating
-        document.addEventListener('DOMContentLoaded', function() {
-            const questionRadios = document.querySelectorAll('input[name^="question_"]');
-            const finalRatingInput = document.querySelector('input[name="final_rating"]');
-
-            questionRadios.forEach(radio => {
-                radio.addEventListener('change', function() {
-                    calculateFinalRating();
-                });
-            });
-
-            function calculateFinalRating() {
-                let totalRating = 0;
-                let questionCount = 0;
-
-                questionRadios.forEach(radio => {
-                    if (radio.checked) {
-                        totalRating += parseInt(radio.value); 
-                        questionCount++;
-                    }
-                });
-
-                if (questionCount > 0) {
-                    const finalRating = (totalRating / questionCount).toFixed(2);
-                    finalRatingInput.value = finalRating;
-                } else {
-                    finalRatingInput.value = '';
-                }
-            }
-        });
-    </script>
 </body>
 </html>

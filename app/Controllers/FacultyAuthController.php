@@ -15,8 +15,40 @@ class FacultyAuthController extends Controller
     }
     public function index()
     {
-        return view('faculty/faculty_dash'); // Ensure this view exists
+        // Assuming facultyId is stored in the session after login
+        $facultyId = session()->get('faculty_id'); // Replace with your actual session key
+
+        // Fetch the current academic session dynamically
+        $academicId = $this->getCurrentAcademicId(); // Function to get the current active academic ID
+
+        // Pass the facultyId and academicId to the view
+        return view('faculty/faculty_dash', [
+            'facultyId' => $facultyId,
+            'academicId' => $academicId
+        ]);
     }
+
+    private function getCurrentAcademicId()
+    {
+        // Get the current year
+        $currentYear = date('Y'); // Current year (e.g., 2024)
+        $nextYear = $currentYear + 1; // Next year (e.g., 2025)
+
+        // Format the school year as "YYYY-YYYY"
+        $schoolYear = "{$currentYear}-{$nextYear}";
+
+        // Fetch the active academic session from the database
+        $academicSession = $this->db->table('academic')
+            ->where('school_year', $schoolYear)
+            ->where('status', 1) // Status 1 means "Start" (active)
+            ->get()
+            ->getRow();
+
+        return $academicSession ? $academicSession->id : null; // Return the academic ID if found
+    }
+
+
+
 
     // Faculty registration form view
     public function sign_up()

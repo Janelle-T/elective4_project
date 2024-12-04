@@ -61,7 +61,14 @@ $routes->group('faculty', function($routes) {
     $routes->post('delete/(:num)', 'FacultyAuthController::delete/$1');
     $routes->get('editFaculty/(:num)', 'FacultyAuthController::editFaculty/$1'); // Edit Faculty
     $routes->post('updateFaculty/(:num)', 'FacultyAuthController::updateFaculty/$1'); // Update Faculty
+
+    // Evaluation Results
+    //$routes->get('evaluation-results', 'EvaluationAnswerController::fetchResultsByFacultyWithSentiment', ['filter' => 'auth:faculty']);
 });
+// app/Config/Routes.php
+
+$routes->get('evaluationresults/(:num)/(:num)', 'EvaluationController::evaluationResults/$1/$2');
+
 
 $routes->group('student', function($routes) {
     $routes->get('sign_up', 'StudentAuthController::sign_up');
@@ -101,6 +108,10 @@ $routes->group('evaluation', function($routes) {
     // Evaluation Answer Routes
     $routes->get('form', 'EvaluationAnswerController::index'); // Access the evaluation form
     $routes->match(['get', 'post'], 'submit', 'EvaluationAnswerController::submit');
+
+
+    //Evaluation Results
+    $routes->get('results/(:num)/(:num)', 'EvaluationAnswerController::evaluationResults/$1/$2');
 });
 
 
