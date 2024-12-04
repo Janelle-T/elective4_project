@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 use App\Models\EvaluationDateModel;
+date_default_timezone_set('Asia/Manila');
 
 class EvaluationDateController extends BaseController
 {
@@ -12,6 +13,7 @@ class EvaluationDateController extends BaseController
     public function __construct()
     {
         $this->evaluationDateModel = new EvaluationDateModel();
+        // date_default_timezone_set('Asia/Manila');
     }
 
     // Show all evaluation dates (for the calendar view)
@@ -24,7 +26,7 @@ class EvaluationDateController extends BaseController
         return view('admin/evaluation_dates', $data);
     }
 
-    // Show the form to create a new evaluation date
+    // Show the focreate_rm to create a ew evaluation date
     public function create()
     {
         return view('admin/create_evaluation_date');
@@ -98,21 +100,23 @@ class EvaluationDateController extends BaseController
         return redirect()->to('/evaluation-dates')->with('message', 'Evaluation Date deleted successfully');
     }
 
-    // Show evaluation dates (for the calendar)
     public function showEvaluationDates()
     {
-        // Fetch evaluation dates from the model
         $evaluationDates = $this->evaluationDateModel->findAll();
 
-        // Return them as a JSON response (for calendar events)
         return $this->response->setJSON(array_map(function($date) {
+            $utc = new DateTimeZone('UTC');
+            $start = new \DateTime($date['open_datetime'], $utc);
+            $end = new \DateTime($date['close_datetime'], $utc);
+
+
             return [
-                'title' => 'Evaluation: ' . $date['id'],
-                'start' => $date['open_datetime'],
-                'end' => $date['close_datetime'],
-                'url' => base_url("/evaluation-dates/view/{$date['id']}"),
-                'color' => '#007bff', 
-                'textColor' => 'white'
+                'title' => 'Evaluation Period',
+                'start' => $start->format('Y-m-d\TH:i:s\Z'),  // ISO8601 with UTC 'Z'
+                'end'   => $end->format('Y-m-d\TH:i:s\Z'),    // ISO8601 with UTC 'Z'
+                'extendedProps' => [ 
+                    'id' => $date['id']
+                ]
             ];
         }, $evaluationDates));
     }

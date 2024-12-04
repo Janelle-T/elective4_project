@@ -74,12 +74,12 @@
                     <div class="card mb-4">
                         <div class="card-body">
                             <div id="calendar"></div>
-                            <?php if ($isEvaluationOpen): ?>
-                                <a href="<?= base_url('evaluation/form') ?>" class="btn btn-primary mt-3">Access Evaluation Form</a>
-                            <?php else: ?>
-                                <p class="mt-3">The Evaluation Form is currently closed. Please check back later.</p>
-                            <?php endif; ?>
-                        </div>
+                            <div id="evaluationFormLink">  </div>
+                        <div id="calendar"></div>
+<div id="evaluationFormLink" style="display:none;">  <!-- Initially Hidden -->
+    <a href="#" class="btn btn-primary mt-3">Access Evaluation Form</a>
+</div>
+<p id="evaluationClosedMessage" style="display: none;" class="mt-3">The Evaluation Form is currently closed. Please check back later.</p>
                     </div>
                 </div>
             </main>
@@ -106,13 +106,37 @@
             var calendarEl = document.getElementById('calendar');
             var calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
-                events: '<?= base_url('student/showEvaluationDates') ?>', // Fetch events from the controller
-                eventClick: function(info) {
-                    //This will not run because the events is not an array of objects
-                    //alert('Evaluation Date ID: ' + info.event.id); 
+                events: '<?= base_url('student/showEvaluationDates') ?>',
+                eventRender: function(info) {
+                    var nowUtc = new Date(); // Get current time in user's timezone
+                    nowUtc.setMinutes(nowUtc.getMinutes() - nowUtc.getTimezoneOffset()); // Convert to UTC
+
+                    var start = new Date(info.event.start);
+                    var end = new Date(info.event.end);
+
+                    var evaluationFormLink = document.getElementById('evaluationFormLink');
+
+                    if (start <= nowUtc && end >= nowUtc) { // Compare UTC times
+                        info.el.classList.add('fc-event-active');
+                        evaluationFormLink.style.display = 'block';
+
+
+                        // Set href based on event ID (if needed)
+                        var evaluationDateId = info.event.extendedProps.id;
+                        var link = evaluationFormLink.querySelector('a');
+                        if (link) {
+                            link.href = '<?= base_url('evaluation/form/') ?>' + evaluationDateId; 
+                        }
+
+                    } else {
+                        info.el.classList.remove('fc-event-active');
+                        evaluationFormLink.style.display = 'none';
+                    }
                 }
             });
             calendar.render();
+
+            document.getElementById('evaluationFormLink').style.display = 'none'; // Initially hidden
         });
 
     function logout() {

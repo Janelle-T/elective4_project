@@ -4,6 +4,7 @@ namespace Config;
 
 use CodeIgniter\Config\BaseConfig;
 use CodeIgniter\Log\Handlers\FileHandler;
+date_default_timezone_set('Asia/Singapore');   
 
 class Logger extends BaseConfig
 {
