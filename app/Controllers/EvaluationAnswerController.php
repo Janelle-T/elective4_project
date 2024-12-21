@@ -227,39 +227,6 @@ public function evaluationResults()
     ]);
 }
 
-private function getSummarizedEvaluationResults($facultyId, $academicId)
-{
-    return $this->db->table('evaluation')
-        ->select([
-            'evaluation_answer.evaluation_question_id',
-            'evaluation_question.question_text',
-            'AVG(rating.rate) AS average_rating', // Calculate average rating per question
-            'COUNT(DISTINCT evaluation.id) AS total_evaluations', // Count distinct evaluations
-            'GROUP_CONCAT(DISTINCT evaluation.comment ORDER BY evaluation.created_at) AS tokenized_comments' // Concatenate all comments
-        ])
-        ->join('evaluation_answer', 'evaluation.id = evaluation_answer.evaluation_id', 'left')
-        ->join('evaluation_question', 'evaluation_answer.evaluation_question_id = evaluation_question.id', 'left')
-        ->join('rating', 'evaluation_answer.rating_id = rating.id', 'left')
-        ->where('evaluation.faculty_id', $facultyId)
-        ->where('evaluation.academic_id', $academicId)
-        ->groupBy('evaluation_answer.evaluation_question_id') // Group by question
-        ->get()
-        ->getResultArray(); // Fetch results as an array
-}
-
-// Fetch individual ratings for a given question, faculty, and academic semester
-private function getIndividualRatings($evaluationQuestionId, $facultyId, $academicId)
-{
-    return $this->db->table('evaluation')
-        ->select('rating.rate')
-        ->join('evaluation_answer', 'evaluation.id = evaluation_answer.evaluation_id')
-        ->join('rating', 'evaluation_answer.rating_id = rating.id')
-        ->where('evaluation.faculty_id', $facultyId)
-        ->where('evaluation.academic_id', $academicId)
-        ->where('evaluation_answer.evaluation_question_id', $evaluationQuestionId)
-        ->get()
-        ->getResultArray(); // Fetch all individual ratings
-}
 
 
 private function tokenizeComment($comments)
@@ -375,6 +342,39 @@ private function analyzeSentiment($comment)
 }
 
 
+private function getSummarizedEvaluationResults($facultyId, $academicId)
+{
+    return $this->db->table('evaluation')
+        ->select([
+            'evaluation_answer.evaluation_question_id',
+            'evaluation_question.question_text',
+            'AVG(rating.rate) AS average_rating', // Calculate average rating per question
+            'COUNT(DISTINCT evaluation.id) AS total_evaluations', // Count distinct evaluations
+            'GROUP_CONCAT(DISTINCT evaluation.comment ORDER BY evaluation.created_at) AS tokenized_comments' // Concatenate all comments
+        ])
+        ->join('evaluation_answer', 'evaluation.id = evaluation_answer.evaluation_id', 'left')
+        ->join('evaluation_question', 'evaluation_answer.evaluation_question_id = evaluation_question.id', 'left')
+        ->join('rating', 'evaluation_answer.rating_id = rating.id', 'left')
+        ->where('evaluation.faculty_id', $facultyId)
+        ->where('evaluation.academic_id', $academicId)
+        ->groupBy('evaluation_answer.evaluation_question_id') // Group by question
+        ->get()
+        ->getResultArray(); // Fetch results as an array
+}
+
+// Fetch individual ratings for a given question, faculty, and academic semester
+private function getIndividualRatings($evaluationQuestionId, $facultyId, $academicId)
+{
+    return $this->db->table('evaluation')
+        ->select('rating.rate')
+        ->join('evaluation_answer', 'evaluation.id = evaluation_answer.evaluation_id')
+        ->join('rating', 'evaluation_answer.rating_id = rating.id')
+        ->where('evaluation.faculty_id', $facultyId)
+        ->where('evaluation.academic_id', $academicId)
+        ->where('evaluation_answer.evaluation_question_id', $evaluationQuestionId)
+        ->get()
+        ->getResultArray(); // Fetch all individual ratings
+}
 
 
 

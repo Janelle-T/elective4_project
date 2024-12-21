@@ -111,6 +111,58 @@
                     <?php endforeach; ?>
                 </tbody>
             </table>
+
+            <!-- Display Overall Tokenized Comments and Sentiment -->
+           <div class="card">
+    <h3>Overall Comments and Sentiment</h3>
+    
+    <p><strong>Tokenized Comments:</strong>
+        <?php
+            // Initialize an array to collect all tokenized comments
+            $allComments = [];
+            
+            // Loop through the results and merge the tokenized comments
+            foreach ($summaryResults as $result) {
+                if (!empty($result['tokenized_comment'])) {
+                    // Ensure the tokenized comment is an array before merging
+                    if (is_array($result['tokenized_comment'])) {
+                        $allComments = array_merge($allComments, $result['tokenized_comment']);
+                    } else {
+                        // If it's a string, convert it to an array (split by spaces or commas)
+                        $allComments = array_merge($allComments, explode(' ', $result['tokenized_comment']));
+                    }
+                }
+            }
+            
+            // Remove duplicates and display tokenized comments
+            $uniqueComments = array_unique($allComments);
+            $tokenizedComments = implode(', ', array_map('esc', $uniqueComments));
+            echo $tokenizedComments;
+        ?>
+    </p>
+    
+    <p><strong>Sentiment:</strong>
+        <?php
+            // Initialize an array to collect all sentiments
+            $allSentiments = [];
+            
+            // Loop through the results and collect the sentiments
+            foreach ($summaryResults as $result) {
+                if (!empty($result['sentiment'])) {
+                    // Merge the sentiments
+                    $allSentiments[] = $result['sentiment'];
+                }
+            }
+            
+            // Remove duplicates and display sentiments
+            $uniqueSentiments = array_unique($allSentiments);
+            $sentiment = implode(', ', array_map('esc', $uniqueSentiments));
+            echo $sentiment;
+        ?>
+    </p>
+</div>
+
+
         <?php endif; ?>
     </div>
 </body>
