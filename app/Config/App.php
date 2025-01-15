@@ -23,7 +23,7 @@ class App extends BaseConfig
      *
      * E.g., http://example.com/
      */
-    public string $baseURL = 'http://localhost/elective4_project/public';
+    public string $baseURL = 'http://localhost/';
 
     /**
      * Allowed Hostnames in the Site URL other than the hostname in the baseURL.

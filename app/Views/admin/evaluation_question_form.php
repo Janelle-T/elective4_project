@@ -106,10 +106,7 @@
                         </div>
 
                         <!-- Token Link -->
-                        <a class="nav-link" href="<?= base_url('/') ?>">
-                            <div class="sb-nav-link-icon"><i class="fas fa-key"></i></div>
-                            Token
-                        </a>
+                        
                     </div>
                 </div>
             </nav>

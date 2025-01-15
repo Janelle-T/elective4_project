@@ -15,6 +15,22 @@
     <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
     <script src="<?= base_url('assets/js/scripts.js') ?>"></script>
+    <style>
+        .loading-spinner {
+            display: none;
+            width: 30px;
+            height: 30px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body class="sb-nav-fixed">
         <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
@@ -111,10 +127,7 @@
                         </div>
 
                         <!-- Token Link -->
-                        <a class="nav-link" href="<?= base_url('/') ?>">
-                            <div class="sb-nav-link-icon"><i class="fas fa-key"></i></div>
-                            Token
-                        </a>
+                     
                     </div>
                 </div>
             </nav>
@@ -125,8 +138,34 @@
             <main>
                 <div class="container-fluid px-4 mt-4">
                     <h2 class="mb-4">Student List</h2>
+                    <?php if (session()->getFlashdata('success')): ?>
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <?= session()->getFlashdata('success') ?>
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- Error Message -->
+                    <?php if (session()->getFlashdata('error')): ?>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <?= session()->getFlashdata('error') ?>
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    <?php endif; ?>
                     <div class="card mb-4">
                         <div class="card-body">
+                            <!-- Add Import Button -->
+                            <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#importModal">
+                                <i class="fas fa-file-import"></i> Import Data
+
+                            </button>
+                            <!-- Loading Spinner -->
+                            
+
                             <table id="studentTable" class="table table-striped">
                                 <thead>
                                     <tr>
@@ -146,13 +185,38 @@
                         </div>
                     </div>
                 </div>
+                <!-- Import Modal -->
+                <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="importModalLabel">Import Student Data</h5>
+                                <div id="loadingSpinner" class="loading-spinner"></div>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <!-- File upload form -->
+                                <form id="importForm" action="<?= base_url('student/import') ?>" method="POST" enctype="multipart/form-data">
+                                    <div class="mb-3">
+                                        <label for="importFile" class="form-label">Select File</label>
+                                        <input type="file" class="form-control" id="importFile" name="importFile" accept=".csv, .xlsx, .xls" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Upload</button>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </main>
 
             <!-- Footer -->
             <footer class="py-4 bg-light mt-auto">
                 <div class="container-fluid px-4">
                     <div class="d-flex align-items-center justify-content-between small">
-                        <div class="text-muted">Elective 4 Capstone Project - Group 2</div>
+                        <div class="text-muted">Elective 3 System Project - Developer - Janelle Toquero</div>
                         <div>
                             <a href="#">Privacy Policy</a>
                             &middot;
@@ -165,6 +229,10 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.9.0/main.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+
 
     <script>
         $('#studentTable').DataTable({
@@ -187,6 +255,45 @@
                 { data: 'actions' }
             ]
         });
+
+       // Handle file import form submission
+        // Import form submission with loading animation and alert
+        $('#importForm').on('submit', function(e) {
+            e.preventDefault();  // Prevent the default form submission
+            
+            var formData = new FormData(this);  // Get the form data, including the file
+            
+            // Show loading spinner
+            $('#loadingSpinner').show();
+            
+            $.ajax({
+                url: '/student/import',  // The URL to send the POST request to
+                method: 'POST',
+                data: formData,
+                processData: false,  // Prevent jQuery from converting the data
+                contentType: false,  // Let the browser set the content type for file uploads
+                success: function(response) {
+                    // Hide the loading spinner
+                    $('#loadingSpinner').hide();
+
+                    // Show success alert
+                    alert('Data imported successfully!');
+
+                    // Refresh the page
+                    setTimeout(function() {
+                        location.reload();
+                    }, 2000); // Wait 2 seconds before refreshing the page
+                },
+                error: function(xhr, status, error) {
+                    // Hide the loading spinner
+                    $('#loadingSpinner').hide();
+                    
+                    // Show error alert
+                    alert('Error uploading file: ' + error);
+                }
+            });
+        });
+
 
     </script>
 </body>

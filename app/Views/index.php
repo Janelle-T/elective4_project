@@ -181,8 +181,12 @@
 
                     <div class="form-outline mb-4">
                         <label class="form-label" for="typePassword">Password</label>
-                        <input type="password" id="typePassword" name="password" class="form-control form-control-lg" required />
+                        <div style="position: relative;">
+                            <input type="password" id="typePassword" name="password" class="form-control form-control-lg" required />
+                            <i class="fas fa-eye-slash toggle-password" style="position: absolute; top: 50%; right: 10px; transform: translateY(-50%); cursor: pointer;"></i>
+                        </div>
                     </div>
+
 
                     <div class="form-outline mb-4">
                         <label class="form-label" for="userType">Login as</label>
@@ -237,6 +241,26 @@
             }
         };
     </script>
+    <script>
+    // Toggle password visibility
+    document.querySelector('.toggle-password').addEventListener('click', function() {
+        const passwordField = document.getElementById('typePassword');
+        const icon = this;
+
+        // Toggle between password and text field types
+        if (passwordField.type === 'password') {
+            passwordField.type = 'text';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+            
+        } else {
+            passwordField.type = 'password';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        }
+    });
+</script>
+
 </body>
 
 </html>

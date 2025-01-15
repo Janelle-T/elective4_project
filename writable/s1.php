@@ -159,7 +159,9 @@ class EvaluationAnswerController extends BaseController
 
 public function evaluationResults()
 {
-    // Get the faculty_id from the session (e.g., after faculty login)
+    set_time_limit(0);
+
+    // Get the faculty_id from the session
     $facultyId = session()->get('faculty_id');
 
     // Ensure faculty_id exists in the session
@@ -204,158 +206,131 @@ public function evaluationResults()
 
     // Process each summary result to include tokens, sentiment, and individual ratings
     foreach ($summaryResults as &$result) {
-        // Tokenize all comments (combine comments from all students for this question)
-        $comments = $result['tokenized_comments']; // This is a concatenated string of all comments
-        $tokenizedComment = $this->tokenizeComment($comments); // Tokenize the entire string
-        
-        // Analyze sentiment for the concatenated comment
-        $sentiment = $this->analyzeSentiment($comments);
-        
-        // Add tokenized comment and sentiment to the result
-        $result['tokenized_comment'] = implode(' ', $tokenizedComment); // Join tokens into a string for display
-        $result['sentiment'] = $sentiment;
+        // Retrieve all comments related to the current evaluation question
+        $comments = $this->getCommentsForQuestion($result['evaluation_question_id'], $facultyId, $academicId);
 
-        // Fetch individual ratings (assuming they are stored in a specific way)
-        $result['individual_ratings'] = $this->getIndividualRatings($result['evaluation_question_id'], $facultyId, $academicId);
+        // If no comments exist, set default values
+        if (empty($comments)) {
+            $result['tokenized_comment'] = "No comments available.";
+            $result['sentiment'] = "N/A";
+            $result['scores'] = [];
+        } else {
+            // Concatenate all comments for tokenization and sentiment analysis
+            $allComments = implode(' ', array_column($comments, 'comment'));
+
+            // Call the Python script for tokenization and sentiment analysis
+            $apiResponse = $this->analyzeWithPythonScript($allComments);
+            
+            // Clean the output (remove unnecessary NLTK log messages)
+            $cleanResponse = $this->cleanPythonResponse($apiResponse);
+
+            // Debug log cleaned response
+            log_message('debug', 'Cleaned Python response: ' . $cleanResponse);
+            
+            // Decode the JSON response from the Python script
+            $responseData = json_decode($cleanResponse, true);
+
+            // Handle JSON decoding errors
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                log_message('error', 'Invalid JSON from Python script: ' . json_last_error_msg());
+                $result['tokenized_comment'] = "Error in Python response.";
+                $result['sentiment'] = "Error: Sentiment not found.";
+                $result['scores'] = [];
+            } else {
+                // Handle missing or invalid data in the Python response
+                if (!isset($responseData['tokens']) || !isset($responseData['sentiment'])) {
+                    log_message('error', 'Missing data in Python script response.');
+                    $result['tokenized_comment'] = "Error: Tokens not found.";
+                    $result['sentiment'] = "Error: Sentiment not found.";
+                    $result['scores'] = [];
+                } else {
+                    // Assign tokenized comments, sentiment, and scores
+                    $result['tokenized_comment'] = implode(' ', $responseData['tokens']);
+                    $result['sentiment'] = $responseData['sentiment'];
+                    $result['scores'] = $responseData['scores'];  // Include the sentiment scores (neg, neu, pos, compound)
+                }
+            }
+        }
+
+        // Fetch individual ratings (use a fallback if not available)
+        $individualRatings = $this->getIndividualRatings($result['evaluation_question_id'], $facultyId, $academicId);
+        $result['individual_ratings'] = $individualRatings ?: [];
     }
 
-    // Return the view with summarized results including tokens, sentiment, and individual ratings
+    // Return the view with summarized results including tokens, sentiment, scores, and individual ratings
     return view('faculty/evaluation_results', [
-        'summaryResults' => $summaryResults, // Include tokenized comments, sentiment, and individual ratings
+        'summaryResults' => $summaryResults,
         'academicOptions' => $academicOptions,
-        'selectedAcademic' => $selectedAcademic // Pass the selected academic details
+        'selectedAcademic' => $selectedAcademic
     ]);
 }
 
 
-
-private function tokenizeComment($comments)
+// Function to clean the raw output from Python (strip out NLTK messages)
+private function cleanPythonResponse($rawResponse)
 {
-    $stopWords = [
-        'the', 'and', 'of', 'to', 'a', 'in', 'for', 'on', 'with', 'as', 'is', 'at', 'by', 'an', 'from', 'that', 'this', 'it', 'or', 'be', 'are', 'but'
-    ];
-
-    // Clean and tokenize the input comment (split on punctuation and spaces)
-    $tokens = preg_split('/[\s,.\'";!?(){}\[\]:]+/', trim($comments), -1, PREG_SPLIT_NO_EMPTY);
-
-    // Convert all tokens to lowercase
-    $tokens = array_map('strtolower', $tokens);
-
-    // Remove stop words
-    $filteredTokens = array_filter($tokens, function($word) use ($stopWords) {
-        return !in_array($word, $stopWords);
-    });
-
-    // Return filtered tokens as an array
-    return array_values($filteredTokens);  // Clean up the array (remove keys)
-}
-
-private function generatePhrases($tokens)
-{
-    $phrases = [];
-    $currentPhrase = '';
-
-    // Use tokens to generate phrases
-    foreach ($tokens as $token) {
-        // Append token to current phrase
-        $currentPhrase .= $token . ' ';
-
-        // If token ends with punctuation (sentence end), add it as a new phrase
-        if (preg_match('/[.!?]/', $token)) {
-            $phrases[] = trim($currentPhrase); // Add the current phrase to the phrases array
-            $currentPhrase = ''; // Reset for the next phrase
-        }
+    // Remove any lines before the JSON response starts (assuming JSON starts after the last line of NLTK messages)
+    $jsonStartPos = strpos($rawResponse, '{"tokens"');
+    if ($jsonStartPos === false) {
+        return '';  // If no valid JSON is found, return an empty string
     }
 
-    // Add any remaining phrase (in case the last token doesn't end with punctuation)
-    if (!empty($currentPhrase)) {
-        $phrases[] = trim($currentPhrase);
-    }
-
-    return $phrases;
-}
-
-private function analyzeSentiment($comment)
-{
-    // Expanded list of positive, negative, and neutral words
-    $positiveWords = [
-        'good', 'great', 'awesome', 'fantastic', 'amazing', 'excellent', 'positive', 'happy', 
-        'joyful', 'love', 'best', 'wonderful', 'satisfied', 'incredible', 'delightful', 'superb', 
-        'beautiful', 'pleasant', 'brilliant', 'inspiring', 'remarkable'
-    ];
-
-    $negativeWords = [
-        'bad', 'terrible', 'awful', 'horrible', 'poor', 'disappointing', 'upset', 'sad', 'angry', 
-        'frustrated', 'hate', 'worst', 'unpleasant', 'dislike', 'failed', 'regret', 'miserable', 
-        'annoying', 'dreadful', 'upsetting', 'frustrating', 'disgusting', 'tragic', 'distressing', 
-        'painful', 'boring', 'strict', 'nothing', 'learn', 'teach', 'unhelpful', 'hard', 'unpleasant'
-    ];
-
-    $neutralWords = [
-        'okay', 'fine', 'average', 'normal', 'neutral', 'so-so', 'indifferent', 'typical', 'usual', 
-        'regular', 'okayish', 'mediocre', 'fair', 'predictable', 'standard'
-    ];
-
-    // Define negation words
-    $negationWords = ['don\'t', 'not', 'never', 'nothing', 'no', 'none', 'cannot', 'isn\'t', 'wasn\'t'];
-
-    // Convert comment to lowercase
-    $comment = strtolower($comment);
-
-    // Tokenize the comment
-    $tokens = $this->tokenizeComment($comment);
-
-    // Initialize counters
-    $positiveCount = 0;
-    $negativeCount = 0;
-    $neutralCount = 0;
-    $negationFlag = false; // Flag for negation
-
-    // Process each token
-    foreach ($tokens as $token) {
-        // Check for negation
-        if (in_array($token, $negationWords)) {
-            $negationFlag = true;
-        }
-
-        // Check sentiment based on token
-        if (in_array($token, $positiveWords)) {
-            // Reverse sentiment if negation flag is set
-            if ($negationFlag) {
-                $negativeCount++;
-                $negationFlag = false; // Reset after use
-            } else {
-                $positiveCount++;
-            }
-        } elseif (in_array($token, $negativeWords)) {
-            // Reverse sentiment if negation flag is set
-            if ($negationFlag) {
-                $positiveCount++;
-                $negationFlag = false; // Reset after use
-            } else {
-                $negativeCount++;
-            }
-        } elseif (in_array($token, $neutralWords)) {
-            $neutralCount++;
-        }
-    }
-
-    // Determine sentiment based on counts
-    if ($positiveCount > $negativeCount && $positiveCount > $neutralCount) {
-        return 'Positive';
-    } elseif ($negativeCount > $positiveCount && $negativeCount > $neutralCount) {
-        return 'Negative';
-    } elseif ($neutralCount >= $positiveCount && $neutralCount >= $negativeCount) {
-        return 'Neutral';
-    } else {
-        return 'Neutral'; // Default to neutral if no clear sentiment
-    }
+    return substr($rawResponse, $jsonStartPos); // Extract JSON part
 }
 
 
 
+
+private function analyzeWithPythonScript($comments)
+{
+    $pythonExecutablePath = 'C:/Users/DELL/AppData/Local/Programs/Python/Python312/python.exe';
+    $pythonScriptPath = APPPATH . 'Python/sentiment.py';
+    $command = escapeshellcmd("$pythonExecutablePath $pythonScriptPath") . ' ' . escapeshellarg($comments);
+
+    // Execute the command and capture output
+    $output = shell_exec($command . ' 2>&1');
+
+    // Log the raw output for debugging
+    log_message('error', 'Raw Python script output: ' . $output);
+
+    // Check for empty output
+    if (empty($output)) {
+        log_message('error', 'Empty response from Python script.');
+        return json_encode(['error' => 'Empty response from Python script.']);
+    }
+
+    // Attempt to decode JSON
+    $responseData = json_decode($output, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        log_message('error', 'Invalid JSON from Python script: ' . json_last_error_msg());
+        return json_encode(['error' => 'Invalid JSON from Python script.']);
+    }
+
+    // Return the decoded response
+    return json_encode($responseData);
+}
+
+
+// Add this method to EvaluationAnswerController
+private function getCommentsForQuestion($evaluationQuestionId, $facultyId, $academicId)
+{
+    return $this->db->table('evaluation')
+        ->select('comment')
+        ->join('evaluation_answer', 'evaluation.id = evaluation_answer.evaluation_id') // Ensure the join is correct
+        ->where('evaluation_answer.evaluation_question_id', $evaluationQuestionId)
+        ->where('evaluation.faculty_id', $facultyId)
+        ->where('evaluation.academic_id', $academicId)
+        ->get()
+        ->getResultArray(); // Fetch comments for the specific question
+}
+
+
+
+
+// Example method to fetch summarized evaluation results from database
 private function getSummarizedEvaluationResults($facultyId, $academicId)
 {
+    // Your database query logic to fetch evaluation results
     return $this->db->table('evaluation')
         ->select([
             'evaluation_answer.evaluation_question_id',
@@ -374,7 +349,7 @@ private function getSummarizedEvaluationResults($facultyId, $academicId)
         ->getResultArray(); // Fetch results as an array
 }
 
-// Fetch individual ratings for a given question, faculty, and academic semester
+// Example method to fetch individual ratings for a given question, faculty, and academic semester
 private function getIndividualRatings($evaluationQuestionId, $facultyId, $academicId)
 {
     return $this->db->table('evaluation')
@@ -388,19 +363,14 @@ private function getIndividualRatings($evaluationQuestionId, $facultyId, $academ
         ->getResultArray(); // Fetch all individual ratings
 }
 
-
-
-
 private function getAcademicOptions()
-{
-    // Query to get academic year options for the form
-    return $this->db->table('academic')
-        ->select(['id', 'school_year', 'semester'])
-        ->orderBy('school_year', 'DESC')
-        ->get()
-        ->getResultArray();
-}
-
+    {
+        return $this->db->table('academic')
+            ->select(['id', 'school_year', 'semester'])
+            ->orderBy('school_year', 'DESC')
+            ->get()
+            ->getResultArray();
+    }
 
 
 

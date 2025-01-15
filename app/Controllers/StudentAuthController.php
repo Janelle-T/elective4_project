@@ -162,4 +162,101 @@ class StudentAuthController extends BaseController
             return json_encode(['success' => false, 'message' => 'Failed to delete student']);
         }
     }
+
+public function import()
+{
+    $file = $this->request->getFile('importFile');
+
+    // Validate uploaded file
+    if (!$file->isValid() || !in_array($file->getClientExtension(), ['xlsx', 'xls'])) {
+        return redirect()->to('student/list')->with('error', 'Invalid file upload. Please upload a valid Excel file.');
+    }
+
+    $filePath = $file->getTempName();
+    $successCount = 0;
+    $failureCount = 0;
+
+    try {
+        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($filePath);
+        $sheet = $spreadsheet->getActiveSheet();
+        $studentsData = [];
+
+        foreach ($sheet->getRowIterator(2) as $row) {
+            $student_id = $sheet->getCell('A' . $row->getRowIndex())->getValue();
+            $full_name = $sheet->getCell('B' . $row->getRowIndex())->getValue();
+            $email = $sheet->getCell('C' . $row->getRowIndex())->getValue();
+
+            // Skip rows with missing required fields
+            if (empty($student_id) || empty($full_name) || empty($email)) {
+                $failureCount++;
+                continue;
+            }
+
+            $generatedPassword = bin2hex(random_bytes(8));
+            $hashedPassword = password_hash($generatedPassword, PASSWORD_BCRYPT);
+            $verificationToken = bin2hex(random_bytes(32));
+
+            $studentsData[] = [
+                'student_id'        => $student_id,
+                'full_name'         => $full_name,
+                'email'             => $email,
+                'phoneNumber'       => null,
+                'gender'            => null,
+                'passwordHash'      => $hashedPassword,
+                'reset_token'       => null,
+                'token_created_at'  => null,
+                'email_verified'    => 0,
+                'verification_token'=> $verificationToken
+            ];
+
+            // Send email
+            $emailService = \Config\Services::email();
+            $emailService->setTo($email);
+            $emailService->setFrom('noreply@gmail.com', 'USTP-Faculty Evaluation');
+            $emailService->setSubject('Welcome Trailblazers');
+
+            // Use HTML for the message to make the link clickable
+            $message = "
+                <p>Hello, good day! Below are your login details:</p>
+                <p><strong>Email:</strong> {$email}</p>
+                <p><strong>Password:</strong> {$generatedPassword}</p>
+                <p>Please click on the link below to verify your email address:</p>
+                <p><a href='" . base_url('student/verifyEmail/' . $verificationToken) . "'>Verify Email</a></p>
+            ";
+            $emailService->setMessage($message);
+            $emailService->setMailType('html'); // Ensures the email is sent in HTML format
+
+            if (!$emailService->send()) {
+                log_message('error', 'Email sending failed: ' . $emailService->printDebugger());
+                $failureCount++;
+            } else {
+                $successCount++;
+            }
+
+
+        }
+
+        // Insert data into the database
+        if (!empty($studentsData)) {
+            $model = new \App\Models\StudentModel();
+            $model->insertBatch($studentsData);
+        }
+
+        // Prepare success and failure messages
+        $successMessage = "{$successCount} students imported successfully.";
+        if ($failureCount > 0) {
+            $errorMessage = "{$failureCount} students could not be imported due to missing or invalid data or email issues.";
+            return redirect()->to(base_url('student/list'))->with('success', $successMessage)->with('error', $errorMessage);
+        }
+
+        return redirect()->to(base_url('student/list'))->with('success', $successMessage);
+
+    } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
+        return redirect()->to('student/list')->with('error', 'Error processing the file: ' . $e->getMessage());
+    } catch (\Exception $e) {
+        return redirect()->to('student/list')->with('error', 'An unexpected error occurred: ' . $e->getMessage());
+    }
+}
+
+
 }

@@ -111,11 +111,7 @@
                             </nav>
                         </div>
 
-                        <!-- Token Link -->
-                        <a class="nav-link" href="<?= base_url('/') ?>">
-                            <div class="sb-nav-link-icon"><i class="fas fa-key"></i></div>
-                            Token
-                        </a>
+                       
                     </div>
                 </div>
             </nav>
@@ -206,105 +202,107 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script>
-        $(document).ready(function() {
-            var table = $('#departmentTable').DataTable();
+        $(document).ready(function () {
+    const table = $('#departmentTable').DataTable();
 
-            // Load Colleges into the dropdown
-            function loadColleges() {
-                $.ajax({
-                    url: '<?= base_url('admin/getColleges') ?>',
-                    type: 'GET',
-                    success: function(response) {
-                        if (response.success && response.data) {
-                            $('#college').html('<option value="">-- Select College --</option>');
-                            response.data.forEach(function(college) {
-                                $('#college').append(`<option value="${college.college_id}">${college.college_name}</option>`);
-                            });
-                        } else {
-                            alert("No colleges found.");
-                        }
-                    },
-                    error: function() {
-                        alert("An error occurred while loading the colleges.");
-                    }
-                });
-            }
-
-            // Load departments based on the selected college
-            function loadDepartments(collegeId) {
-                if (!collegeId) {
-                    alert('Please select a valid college');
-                    return;
+    // Fetch Colleges
+    function loadColleges() {
+        $.ajax({
+            url: '<?= base_url('admin/getColleges') ?>',
+            type: 'GET',
+            dataType: 'json',
+            success: function (response) {
+                console.log('Colleges:', response);
+                if (response.success) {
+                    $('#college').html('<option value="">-- Select College --</option>');
+                    response.data.forEach(college => {
+                        $('#college').append(`<option value="${college.college_id}">${college.college_name}</option>`);
+                    });
+                } else {
+                    alert('Failed to fetch colleges.');
                 }
-
-                $.ajax({
-                    url: '<?= base_url('admin/getDepartments') ?>/' + collegeId,
-                    type: 'GET',
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success && Array.isArray(response.data)) {
-                            // Clear the table and reload data
-                            table.clear();
-                            response.data.forEach(function(department) {
-                                table.row.add([
-                                    department.department_name,
-                                    department.college_name,
-                                    `<button class="btn btn-info btn-sm" onclick="editDepartment(${department.department_id})">Edit</button>
-                                     <button class="btn btn-danger btn-sm" onclick="deleteDepartment(${department.department_id})">Delete</button>`
-                                ]).draw();
-                            });
-                        } else {
-                            alert("Failed to load departments.");
-                        }
-                    },
-                    error: function() {
-                        alert("An error occurred while loading the departments.");
-                    }
-                });
+            },
+            error: function (xhr) {
+                console.error('Error fetching colleges:', xhr.responseText);
+                alert('Error fetching colleges. Check console for details.');
             }
-
-            // Function to handle form submission
-            $('#departmentForm').submit(function(event) {
-                event.preventDefault();
-
-                var collegeId = $('#college').val();
-                var departmentName = $('#department_name').val();
-
-                if (!collegeId || !departmentName) {
-                    alert("All fields are required.");
-                    return;
-                }
-
-                $.ajax({
-                    url: '<?= base_url('admin/saveDepartment') ?>',
-                    type: 'POST',
-                    data: $(this).serialize(),
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
-                            alert('Department added successfully');
-                            $('#departmentForm')[0].reset();
-                            $('#departmentModal').modal('hide');
-                            loadDepartments(collegeId); // Reload the departments after adding a new one
-                        } else {
-                            alert('Error: ' + response.message);
-                        }
-                    },
-                    error: function() {
-                        alert("An error occurred while adding the department.");
-                    }
-                });
-            });
-
-            // Load colleges on page load
-            loadColleges();
-
-            // Trigger department load when a college is selected
-            $('#college').change(function() {
-                var collegeId = $(this).val();
-                loadDepartments(collegeId);
-            });
         });
+    }
+
+    // Fetch Departments
+    function loadDepartments(collegeId) {
+        if (!collegeId) return;
+        $.ajax({
+            url: `<?= base_url('admin/getDepartments') ?>/${collegeId}`,
+            type: 'GET',
+            dataType: 'json',
+            success: function (response) {
+                console.log('Departments:', response);
+                if (response.success) {
+                    table.clear();
+                    response.data.forEach(dept => {
+                        table.row.add([
+                            dept.department_name,
+                            dept.college_name,
+                            `
+                                <button class="btn btn-info btn-sm" onclick="editDepartment(${dept.department_id})">Edit</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteDepartment(${dept.department_id})">Delete</button>
+                            `
+                        ]).draw();
+                    });
+                } else {
+                    alert('No departments found.');
+                }
+            },
+            error: function (xhr) {
+                console.error('Error fetching departments:', xhr.responseText);
+                alert('Error fetching departments. Check console for details.');
+            }
+        });
+    }
+
+    // Save Department
+    $('#departmentForm').submit(function (event) {
+        event.preventDefault();
+
+        const collegeId = $('#college').val();
+        const departmentName = $('#department_name').val();
+
+        if (!collegeId || !departmentName) {
+            alert('All fields are required.');
+            return;
+        }
+
+        $.ajax({
+            url: '<?= base_url('admin/saveDepartment') ?>',
+            type: 'POST',
+            data: $(this).serialize(),
+            dataType: 'json',
+            success: function (response) {
+                if (response.success) {
+                    alert('Department added successfully.');
+                    $('#departmentForm')[0].reset();
+                    $('#departmentModal').modal('hide');
+                    loadDepartments(collegeId);
+                } else {
+                    alert('Error: ' + response.message);
+                }
+            },
+            error: function (xhr) {
+                console.error('Error saving department:', xhr.responseText);
+                alert('Error saving department. Check console for details.');
+            }
+        });
+    });
+
+    // Initialize
+    loadColleges();
+    $('#college').change(function () {
+        const collegeId = $(this).val();
+        loadDepartments(collegeId);
+    });
+});
+
     </script>
     
     <script>
